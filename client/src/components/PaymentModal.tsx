@@ -4,32 +4,72 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { paymentApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface PaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseName: string;
+  courseId: string;
   price: string;
 }
 
-export default function PaymentModal({ open, onOpenChange, courseName, price }: PaymentModalProps) {
+export default function PaymentModal({ open, onOpenChange, courseName, courseId, price }: PaymentModalProps) {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [status, setStatus] = useState<"idle" | "processing" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const handlePayment = (e: React.FormEvent) => {
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (paymentId && status === "processing") {
+      interval = setInterval(async () => {
+        try {
+          const result = await paymentApi.checkStatus(paymentId);
+          if (result.status === "success") {
+            setStatus("success");
+            clearInterval(interval);
+            setTimeout(() => {
+              onOpenChange(false);
+              setStatus("idle");
+              setPhoneNumber("");
+              setPaymentId(null);
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("Status check error:", error);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [paymentId, status, onOpenChange]);
+
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("processing");
-    console.log("Payment initiated:", { phoneNumber, courseName, price });
     
-    setTimeout(() => {
-      setStatus("success");
-      setTimeout(() => {
-        onOpenChange(false);
-        setStatus("idle");
-        setPhoneNumber("");
-      }, 2000);
-    }, 2000);
+    try {
+      const result = await paymentApi.createMobilePayment(courseId, phoneNumber);
+      setPaymentId(result.paymentId);
+      toast({
+        title: "Payment Initiated",
+        description: "Please approve the payment on your phone",
+      });
+    } catch (error: any) {
+      setStatus("error");
+      toast({
+        title: "Payment Failed",
+        description: error.response?.data?.error || "Failed to initiate payment",
+        variant: "destructive"
+      });
+      setTimeout(() => setStatus("idle"), 2000);
+    }
   };
 
   return (

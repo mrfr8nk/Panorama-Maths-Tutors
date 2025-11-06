@@ -1,11 +1,13 @@
 import { Link } from "wouter";
-import { BookOpen, Menu, Moon, Sun } from "lucide-react";
+import { BookOpen, Menu, Moon, Sun, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Header() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -60,11 +62,25 @@ export default function Header() {
             >
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </Button>
-            <Link href="/auth">
-              <Button variant="default" size="default" data-testid="button-login">
-                Login
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link href={user.role === 'admin' ? "/admin" : "/student"}>
+                  <Button variant="ghost" size="default" className="gap-2" data-testid="button-dashboard">
+                    <User className="w-4 h-4" />
+                    {user.name}
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={logout} data-testid="button-logout">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <Link href="/auth">
+                <Button variant="default" size="default" data-testid="button-login">
+                  Login
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="icon"

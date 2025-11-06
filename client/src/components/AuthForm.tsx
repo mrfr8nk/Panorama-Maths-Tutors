@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 
 export default function AuthForm() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
@@ -16,18 +18,49 @@ export default function AuthForm() {
     confirmPassword: "",
     role: "student" 
   });
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { login, register } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login:", loginData);
-    toast({ title: "Logged in successfully!" });
+    setIsLoading(true);
+    try {
+      await login(loginData.email, loginData.password);
+      toast({ title: "Logged in successfully!" });
+      setLocation("/student");
+    } catch (error: any) {
+      toast({ 
+        title: "Login failed", 
+        description: error.response?.data?.error || "Invalid credentials",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Register:", registerData);
-    toast({ title: "Account created successfully!" });
+    if (registerData.password !== registerData.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await register(registerData.name, registerData.email, registerData.password, registerData.role);
+      toast({ title: "Account created successfully!" });
+      setLocation(registerData.role === 'admin' ? "/admin" : "/student");
+    } catch (error: any) {
+      toast({ 
+        title: "Registration failed", 
+        description: error.response?.data?.error || "Failed to create account",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,8 +103,8 @@ export default function AuthForm() {
                 />
               </div>
               
-              <Button type="submit" className="w-full" data-testid="button-login-submit">
-                Login
+              <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login-submit">
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
           </TabsContent>
@@ -146,8 +179,8 @@ export default function AuthForm() {
                 />
               </div>
               
-              <Button type="submit" className="w-full" data-testid="button-register-submit">
-                Create Account
+              <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-register-submit">
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
           </TabsContent>

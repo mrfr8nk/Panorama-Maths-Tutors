@@ -12,6 +12,7 @@ export default function PaymentModalExample() {
         open={open}
         onOpenChange={setOpen}
         courseName="Cambridge A Level Calculus"
+        courseId="example-course-id"
         price="$25.00"
       />
     </div>

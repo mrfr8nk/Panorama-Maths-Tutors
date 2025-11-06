@@ -1,15 +1,406 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import express from "express";
+import bcrypt from "bcryptjs";
+import multer from "multer";
+import User from "./models/User";
+import Course from "./models/Course";
+import Payment from "./models/Payment";
+import { generateToken, authenticateToken, requireAdmin, requireTutorOrAdmin, AuthRequest } from "./middleware/auth";
+import { uploadToCatbox } from "./utils/catbox";
+import { initiateMobilePayment, checkPaymentStatus } from "./utils/paynow";
+import { connectDB } from "./db";
+import { registerSchema, loginSchema, courseSchema, paymentSchema } from "./validation";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Connect to MongoDB
+  await connectDB();
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // Auth routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validatedData = registerSchema.parse(req.body);
+      const { name, email, password, role } = validatedData;
+
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = new User({
+        name,
+        email,
+        password: hashedPassword,
+        role
+      });
+
+      await user.save();
+
+      const token = generateToken(String(user._id), user.role);
+      res.json({
+        token,
+        user: {
+          id: String(user._id),
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const validatedData = loginSchema.parse(req.body);
+      const { email, password } = validatedData;
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const token = generateToken(String(user._id), user.role);
+      res.json({
+        token,
+        user: {
+          id: String(user._id),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          enrolledCourses: user.enrolledCourses
+        }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.get("/api/auth/me", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const user = await User.findById(req.userId).select('-password').populate('enrolledCourses');
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Course routes
+  app.get("/api/courses", async (req, res) => {
+    try {
+      const { type, status } = req.query;
+      const filter: any = {};
+      if (type) filter.type = type;
+      if (status) filter.status = status;
+
+      const courses = await Course.find(filter).populate('createdBy', 'name email');
+      res.json(courses);
+    } catch (error) {
+      console.error("Fetch courses error:", error);
+      res.status(500).json({ error: "Failed to fetch courses" });
+    }
+  });
+
+  app.get("/api/courses/:id", async (req, res) => {
+    try {
+      const course = await Course.findById(req.params.id).populate('createdBy', 'name email');
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch course" });
+    }
+  });
+
+  app.post("/api/courses", authenticateToken, requireTutorOrAdmin, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const validatedData = courseSchema.parse({
+        ...req.body,
+        price: req.body.price ? parseFloat(req.body.price) : undefined
+      });
+      const { title, description, type, status, price, youtubeLink, resourceType } = validatedData;
+
+      let fileUrl = '';
+      if (req.file) {
+        try {
+          fileUrl = await uploadToCatbox(req.file.buffer, req.file.originalname);
+        } catch (uploadError) {
+          console.error("File upload error:", uploadError);
+          return res.status(500).json({ error: "Failed to upload file" });
+        }
+      }
+
+      const course = new Course({
+        title,
+        description,
+        type,
+        status,
+        price,
+        fileUrl,
+        youtubeLink,
+        resourceType,
+        createdBy: req.userId
+      });
+
+      await course.save();
+      res.json(course);
+    } catch (error) {
+      console.error("Create course error:", error);
+      res.status(500).json({ error: "Failed to create course" });
+    }
+  });
+
+  app.put("/api/courses/:id", authenticateToken, requireTutorOrAdmin, async (req: AuthRequest, res) => {
+    try {
+      const course = await Course.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+      );
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update course" });
+    }
+  });
+
+  app.delete("/api/courses/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const course = await Course.findByIdAndDelete(req.params.id);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json({ message: "Course deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete course" });
+    }
+  });
+
+  // Payment routes
+  app.post("/api/paynow/create-mobile-payment", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const validatedData = paymentSchema.parse(req.body);
+      const { courseId, phoneNumber } = validatedData;
+
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+
+      if (course.status !== 'Premium') {
+        return res.status(400).json({ error: "This course is free" });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const payment = new Payment({
+        userId: req.userId,
+        courseId,
+        amount: course.price || 0,
+        phoneNumber,
+        status: 'pending'
+      });
+
+      await payment.save();
+
+      try {
+        const paynowResponse = await initiateMobilePayment(
+          user.email,
+          phoneNumber,
+          course.title,
+          course.price || 0
+        );
+
+        if (paynowResponse.success) {
+          payment.status = 'processing';
+          payment.paynowReference = paynowResponse.reference;
+          payment.paynowPollUrl = paynowResponse.pollUrl;
+          await payment.save();
+
+          res.json({
+            paymentId: payment._id,
+            pollUrl: paynowResponse.pollUrl,
+            instructions: paynowResponse.instructions
+          });
+        } else {
+          payment.status = 'failed';
+          await payment.save();
+          res.status(500).json({ error: "Failed to initiate payment" });
+        }
+      } catch (paynowError) {
+        console.error("Paynow error:", paynowError);
+        payment.status = 'failed';
+        await payment.save();
+        res.status(500).json({ error: "Payment service unavailable. Please try again later." });
+      }
+    } catch (error) {
+      console.error("Payment creation error:", error);
+      res.status(500).json({ error: "Failed to create payment" });
+    }
+  });
+
+  app.get("/api/payments/:id/status", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const payment = await Payment.findById(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      if (payment.userId.toString() !== req.userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      if (payment.status === 'success') {
+        return res.json({ status: 'success' });
+      }
+
+      if (payment.paynowPollUrl) {
+        try {
+          const status = await checkPaymentStatus(payment.paynowPollUrl);
+          
+          if (status.paid) {
+            payment.status = 'success';
+            await payment.save();
+
+            // Enroll user in course
+            const user = await User.findById(payment.userId);
+            if (user && !user.enrolledCourses.includes(payment.courseId)) {
+              user.enrolledCourses.push(payment.courseId);
+              await user.save();
+            }
+
+            // Increment course enrollments
+            await Course.findByIdAndUpdate(payment.courseId, { $inc: { enrollments: 1 } });
+
+            return res.json({ status: 'success' });
+          } else {
+            return res.json({ status: payment.status });
+          }
+        } catch (statusError) {
+          console.error("Status check error:", statusError);
+          return res.json({ status: payment.status });
+        }
+      }
+
+      res.json({ status: payment.status });
+    } catch (error) {
+      console.error("Payment status error:", error);
+      res.status(500).json({ error: "Failed to check payment status" });
+    }
+  });
+
+  app.post("/api/paynow/result", express.urlencoded({ extended: true }), async (req, res) => {
+    try {
+      const { reference, paynowreference, status } = req.body;
+      
+      const payment = await Payment.findOne({ paynowReference: reference });
+      if (payment) {
+        if (status === 'Paid') {
+          payment.status = 'success';
+          await payment.save();
+
+          // Enroll user
+          const user = await User.findById(payment.userId);
+          if (user && !user.enrolledCourses.includes(payment.courseId)) {
+            user.enrolledCourses.push(payment.courseId);
+            await user.save();
+          }
+
+          // Increment enrollments
+          await Course.findByIdAndUpdate(payment.courseId, { $inc: { enrollments: 1 } });
+        } else {
+          payment.status = 'failed';
+          await payment.save();
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error("Paynow result error:", error);
+      res.status(200).send('OK');
+    }
+  });
+
+  // Enrollment route (for free courses)
+  app.post("/api/courses/:id/enroll", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const course = await Course.findById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+
+      if (course.status === 'Premium') {
+        return res.status(400).json({ error: "This is a premium course. Payment required." });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const courseId = course._id as any;
+      if (user.enrolledCourses.some(id => String(id) === String(courseId))) {
+        return res.status(400).json({ error: "Already enrolled in this course" });
+      }
+
+      user.enrolledCourses.push(courseId);
+      await user.save();
+
+      course.enrollments += 1;
+      await course.save();
+
+      res.json({ message: "Successfully enrolled in course" });
+    } catch (error) {
+      console.error("Enrollment error:", error);
+      res.status(500).json({ error: "Failed to enroll in course" });
+    }
+  });
+
+  // Analytics routes
+  app.get("/api/analytics/stats", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const totalCourses = await Course.countDocuments();
+      const totalStudents = await User.countDocuments({ role: 'student' });
+      const totalRevenue = await Payment.aggregate([
+        { $match: { status: 'success' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const totalEnrollments = await Course.aggregate([
+        { $group: { _id: null, total: { $sum: '$enrollments' } } }
+      ]);
+
+      res.json({
+        totalCourses,
+        totalStudents,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        totalEnrollments: totalEnrollments[0]?.total || 0
+      });
+    } catch (error) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
