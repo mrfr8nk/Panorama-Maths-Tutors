@@ -1,0 +1,334 @@
+Perfect ✅ — so you want the same full-stack system, but branded and structured for Panorama Maths Tutors, not St. Mary’s.
+Everything — including the Paynow (Ecocash) integration, MongoDB + Catbox backend, admin upload system, frontend (React + Tailwind + Glassmorphism + Framer Motion + Lucide icons) — should now reflect the Panorama Maths Tutors brand, style, and goals.
+
+Here’s your final full master prompt 👇
+
+
+---
+
+🧮 MASTER PROMPT — PANORAMA MATHS TUTORS PLATFORM (FULL PAYNOW/ECOCASH VERSION)
+
+Created for: Panorama Maths Tutors
+Powered by: Mr Frank
+Goal: Build a modern, professional, animated, and data-driven tutoring web platform for ZIMSEC, Cambridge, and Tertiary Mathematics — with both free and premium content, admin upload management, student access, and Ecocash payments via Paynow.
+
+
+---
+
+⚙️ 1️⃣ STACK & CORE DESIGN
+
+Frontend: React + TailwindCSS + Framer Motion + Lucide-react Icons
+
+Backend: Node.js + Express + MongoDB (Mongoose)
+
+Storage:
+
+Files (PDFs, Notes, Books, Videos) → Catbox API
+
+Metadata (links, descriptions, course type) → MongoDB
+
+
+Payment Gateway: Paynow (Ecocash Integration)
+
+Auth: JWT-based login for Admin, Tutors, and Students
+
+UI Style: Glassmorphism (blurred transparent panels, frosted edges, gradient blue/yellow palette matching flyer theme).
+
+
+
+---
+
+🏠 2️⃣ MAIN SITE PAGES
+
+1. Home Page (/)
+
+Hero banner with glassmorphic overlay, tagline, and CTA:
+“Master Maths with Confidence.”
+
+Animated intro using Framer Motion (fade + slide transitions).
+
+“Courses Offered” section (ZIMSEC, Cambridge, Tertiary).
+
+Mode of Study section (Online tutorials, Evening sessions, One-on-One, Home visits).
+
+Embedded YouTube promo (iframe).
+
+Footer with contact info, icons, and socials.
+
+
+
+2. Courses Page (/courses)
+
+Dynamic grid of courses:
+
+Free (Open Access PDFs, YouTube links).
+
+Premium (Locked until Paynow payment success).
+
+
+Each course card → animation on hover + “Enroll / Access” button.
+
+Lucide icons (📘 for PDF, 🎥 for Video, 💡 for Lesson).
+
+
+
+3. About Page (/about)
+
+Mission, Vision, Tutor profiles with glass cards and motion reveals.
+
+
+
+4. Contact Page (/contact)
+
+Smart form (Name, Email, Subject, Message).
+
+Sends via Nodemailer or Firebase Cloud Function.
+
+Shows animated success/error toast.
+
+
+
+5. Login / Register Page (/auth)
+
+Roles: Admin, Tutor, Student.
+
+Secure JWT login with MongoDB users collection.
+
+
+
+
+
+---
+
+🧠 3️⃣ ADMIN DASHBOARD (/admin)
+
+Layout:
+
+Sidebar with icons (Dashboard, Uploads, Courses, Payments, Users, Settings).
+
+Glassmorphism interface with smooth page transitions.
+
+
+Functions:
+
+1. Upload Content
+
+Upload PDFs, notes, books, or videos (via Catbox).
+
+Set metadata: title, description, course type (ZIMSEC / Cambridge / Tertiary), and status (Free or Premium).
+
+Store Catbox file link + metadata in MongoDB.
+
+Option to embed YouTube link (auto iframe render).
+
+
+
+2. Manage Courses
+
+View, edit, or delete content.
+
+Toggle course visibility.
+
+Filter by course type or price tier.
+
+
+
+3. Manage Users
+
+List all users (students/tutors/admins).
+
+Sort, search, and delete.
+
+View enrolled courses and payment history.
+
+
+
+4. Analytics
+
+Total uploads, downloads, and payments.
+
+Graphs (using Recharts).
+
+
+
+
+
+---
+
+💳 4️⃣ PAYNOW (ECOCASH) INTEGRATION
+
+Replace Stripe — use Paynow Zimbabwe API for instant mobile payments.
+
+Flow:
+
+1. Student selects a Premium Course.
+
+
+2. System asks for Econet mobile number.
+
+
+3. Sends { userId, courseId, phone } to /api/paynow/create-mobile-payment.
+
+
+4. Server creates a payment using:
+
+const paynow = new Paynow(INTEGRATION_ID, INTEGRATION_KEY);
+const payment = paynow.createPayment("Panorama Maths Course", user.email);
+payment.add(courseName, price);
+const response = await paynow.sendMobile(payment, phone, "ecocash");
+
+
+5. User approves Ecocash prompt on phone.
+
+
+6. Paynow sends result to /api/paynow/result.
+
+
+7. Server validates hash → updates MongoDB: status: "paid".
+
+
+8. Frontend polls /api/payments/:id/status until paid.
+
+
+9. Once confirmed → unlocks course for user access.
+
+
+
+Backend Setup:
+
+npm install paynow express mongoose dotenv cors body-parser
+
+.env:
+
+PAYNOW_INTEGRATION_ID=your_id
+PAYNOW_INTEGRATION_KEY=your_key
+PAYNOW_RESULT_URL=https://yourdomain.com/api/paynow/result
+PAYNOW_RETURN_URL=https://yourdomain.com/payments/return
+
+
+
+---
+
+🧮 5️⃣ STUDENT DASHBOARD (/student)
+
+Personalized greeting: “Welcome back, [Name] 👋”
+
+Sections:
+
+My Courses: Free + Paid (dynamically loaded from MongoDB).
+
+Resources: Notes, PDFs, YouTube videos (embedded).
+
+Payments: View payment history + pending transactions.
+
+Profile: Update info (persisted in MongoDB).
+
+
+Animations for transitions between sections.
+
+
+
+---
+
+👨‍🏫 6️⃣ TUTOR DASHBOARD (/tutor)
+
+Upload and manage lessons, quizzes, and notes.
+
+Attach PDF or video links (stored via Catbox + MongoDB).
+
+Set each upload as Free or Premium.
+
+Track engagement metrics (views/downloads).
+
+Manage enrolled students and respond to messages.
+
+
+
+---
+
+🧩 7️⃣ BACKEND ARCHITECTURE
+
+Models:
+
+User: name, email, role, password (hashed).
+
+Course: title, type, description, status (Free/Premium), fileUrl, ytLink, createdBy.
+
+Payment: userId, courseId, amount, status, paynowReference, createdAt.
+
+Upload: metadata for Catbox files.
+
+
+API Routes:
+
+/api/auth/register, /api/auth/login
+
+/api/courses (GET/POST/PUT/DELETE)
+
+/api/upload (for Catbox files)
+
+/api/paynow/create-mobile-payment, /api/paynow/result, /api/payments/:id/status
+
+
+
+---
+
+🖼️ 8️⃣ UI & ANIMATION STYLE
+
+Glassmorphic panels for cards and dashboards.
+
+Framer Motion for animations:
+
+Page transitions.
+
+Card hover effects.
+
+Modal popups for uploads/payments.
+
+
+Lucide-react icons (modern, minimal) for nav and features.
+
+Subtle gradients matching blue, yellow, and white from flyer.
+
+Dark/Light theme toggle in header.
+
+
+
+---
+
+🌍 9️⃣ DEPLOYMENT
+
+Host backend on Render or Railway.
+
+Host frontend on Vercel or Firebase Hosting.
+
+Use environment variables for Paynow credentials.
+
+Ensure HTTPS for callback URLs.
+
+
+
+---
+
+🧱 10️⃣ OPTIONAL EXTRAS
+
+Add Tutor Blog for maths tips.
+
+Add Student Leaderboard for top performers.
+
+Add Certificate PDF generator for completed courses.
+
+Integrate email or SMS notifications for successful payments.
+
+
+
+---
+
+✅ End of Prompt — “Panorama Maths Tutors” Full System with Ecocash (Paynow) Payments, Catbox File Storage, and MongoDB Metadata.
+
+
+---
+
+Would you like me to compress this into a single one-paragraph AI build command (ready to paste into a code-generation model like Replit, v0.dev, or Cursor)?
+That version would generate both frontend + backend boilerplate automatically.
+
