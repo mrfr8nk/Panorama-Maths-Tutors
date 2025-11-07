@@ -16,7 +16,7 @@ export default function AuthForm() {
     email: "", 
     password: "", 
     confirmPassword: "",
-    role: "student" 
+    educationLevel: "" 
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -49,9 +49,10 @@ export default function AuthForm() {
     }
     setIsLoading(true);
     try {
-      await register(registerData.name, registerData.email, registerData.password, registerData.role);
+      const educationLevel = registerData.educationLevel || undefined;
+      await register(registerData.name, registerData.email, registerData.password, educationLevel);
       toast({ title: "Account created successfully!" });
-      setLocation(registerData.role === 'admin' ? "/admin" : "/student");
+      setLocation("/student");
     } catch (error: any) {
       toast({ 
         title: "Registration failed", 
@@ -66,7 +67,7 @@ export default function AuthForm() {
   return (
     <Card className="w-full max-w-md backdrop-blur-md bg-card/90">
       <CardHeader>
-        <CardTitle className="font-heading text-2xl text-center">Welcome to Panorama</CardTitle>
+        <CardTitle className="font-heading text-2xl text-center">Welcome to panoramac</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="login" className="w-full">
@@ -117,7 +118,7 @@ export default function AuthForm() {
                   id="register-name"
                   value={registerData.name}
                   onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                  placeholder="John Doe"
+                  placeholder="Your Full Name"
                   required
                   data-testid="input-register-name"
                 />
@@ -137,18 +138,19 @@ export default function AuthForm() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="register-role">Role</Label>
+                <Label htmlFor="register-education">Education Level (Optional)</Label>
                 <Select 
-                  value={registerData.role} 
-                  onValueChange={(value) => setRegisterData({ ...registerData, role: value })}
+                  value={registerData.educationLevel} 
+                  onValueChange={(value) => setRegisterData({ ...registerData, educationLevel: value })}
                 >
-                  <SelectTrigger data-testid="select-role">
-                    <SelectValue placeholder="Select role" />
+                  <SelectTrigger data-testid="select-education">
+                    <SelectValue placeholder="Select education level (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="tutor">Tutor</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="High School">High School</SelectItem>
+                    <SelectItem value="University">University</SelectItem>
+                    <SelectItem value="College">College</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

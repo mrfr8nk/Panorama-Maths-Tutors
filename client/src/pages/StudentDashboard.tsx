@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { BookOpen, FileText, DollarSign, User, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { courseApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const menuItems = [
   { title: "My Courses", icon: BookOpen, id: "courses" },
@@ -16,6 +22,15 @@ const menuItems = [
 export default function StudentDashboard() {
   const [activeSection, setActiveSection] = useState("courses");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { user } = useAuth();
+
+  const { data: userData, isLoading: userLoading } = useQuery({
+    queryKey: ['/api/auth/me'],
+    enabled: activeSection === "courses" || activeSection === "profile",
+  });
+
+  const enrolledCourses = userData?.enrolledCourses || [];
+  const coursesLoading = userLoading;
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -67,7 +82,7 @@ export default function StudentDashboard() {
           <header className="flex items-center justify-between p-4 border-b border-border backdrop-blur-sm bg-background/80">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">Welcome back, <span className="font-medium text-foreground">John Doe</span></span>
+              <span className="text-sm text-muted-foreground">Welcome back, <span className="font-medium text-foreground">{user?.name || "Student"}</span></span>
               <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="button-theme-toggle">
                 {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
@@ -82,29 +97,39 @@ export default function StudentDashboard() {
               
               {activeSection === "courses" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <Card className="backdrop-blur-sm bg-card/80">
-                    <CardHeader>
-                      <CardTitle>ZIMSEC O Level Algebra</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <Badge>Free</Badge>
-                        <Button size="sm" data-testid="button-view-course">View Course</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="backdrop-blur-sm bg-card/80">
-                    <CardHeader>
-                      <CardTitle>Cambridge A Level Calculus</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary">Premium</Badge>
-                        <Button size="sm" data-testid="button-view-course">View Course</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {coursesLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <Card key={i} className="backdrop-blur-sm bg-card/80">
+                        <CardHeader>
+                          <Skeleton className="h-6 w-3/4" />
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-8 w-full" />
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : enrolledCourses && enrolledCourses.length > 0 ? (
+                    enrolledCourses.map((course: any) => (
+                      <Card key={course._id} className="backdrop-blur-sm bg-card/80" data-testid={`card-course-${course._id}`}>
+                        <CardHeader>
+                          <CardTitle>{course.title}</CardTitle>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between">
+                            <Badge variant={course.status === 'Free' ? 'default' : 'secondary'}>
+                              {course.status}
+                            </Badge>
+                            <Button size="sm" data-testid="button-view-course">View Course</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center text-muted-foreground py-12">
+                      <p>No courses available. Browse the courses page to enroll in courses.</p>
+                    </div>
+                  )}
                 </div>
               )}
               
@@ -113,11 +138,50 @@ export default function StudentDashboard() {
               )}
               
               {activeSection === "payments" && (
-                <div className="text-muted-foreground">Payment history coming soon...</div>
+                <div className="space-y-4">
+                  <Card className="backdrop-blur-sm bg-card/80">
+                    <CardHeader>
+                      <CardTitle>Payment History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">No payment history available yet.</p>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
               
               {activeSection === "profile" && (
-                <div className="text-muted-foreground">Profile settings coming soon...</div>
+                <div className="space-y-6">
+                  <Card className="backdrop-blur-sm bg-card/80">
+                    <CardHeader>
+                      <CardTitle>Personal Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Name</Label>
+                        <Input value={user?.name || ''} disabled />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input value={user?.email || ''} disabled />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Education Level</Label>
+                        <Select value={user?.educationLevel || ''} disabled>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select education level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="High School">High School</SelectItem>
+                            <SelectItem value="University">University</SelectItem>
+                            <SelectItem value="College">College</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
             </div>
           </main>

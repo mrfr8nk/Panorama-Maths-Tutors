@@ -20,6 +20,7 @@ export interface User {
   name: string;
   email: string;
   role: 'student' | 'tutor' | 'admin';
+  educationLevel?: 'High School' | 'University' | 'College' | 'Other';
   enrolledCourses?: string[];
 }
 
@@ -48,8 +49,8 @@ export interface PaymentResponse {
 }
 
 export const authApi = {
-  register: async (name: string, email: string, password: string, role: string) => {
-    const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, role });
+  register: async (name: string, email: string, password: string, educationLevel?: string) => {
+    const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, educationLevel });
     return data;
   },
   

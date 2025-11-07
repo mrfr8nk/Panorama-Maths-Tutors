@@ -4,7 +4,7 @@ export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['student', 'tutor', 'admin']).default('student')
+  educationLevel: z.enum(['High School', 'University', 'College', 'Other']).optional()
 });
 
 export const loginSchema = z.object({
@@ -21,6 +21,8 @@ export const courseSchema = z.object({
   youtubeLink: z.string().url().optional().or(z.literal('')),
   resourceType: z.enum(['PDF', 'Video', 'Lesson'])
 });
+
+export const updateCourseSchema = courseSchema.partial();
 
 export const paymentSchema = z.object({
   courseId: z.string().min(1, 'Course ID is required'),

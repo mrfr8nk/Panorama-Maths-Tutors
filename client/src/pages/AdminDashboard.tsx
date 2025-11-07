@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, Sun } from "lucide-react";
 import DashboardStats from "@/components/DashboardStats";
 import UploadModal from "@/components/UploadModal";
 import CourseTable from "@/components/CourseTable";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const menuItems = [
   { title: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
@@ -20,6 +22,11 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/analytics/stats'],
+    enabled: activeSection === "payments" || activeSection === "users",
+  });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -89,13 +96,106 @@ export default function AdminDashboard() {
               {activeSection === "dashboard" && <DashboardStats />}
               {activeSection === "courses" && <CourseTable />}
               {activeSection === "payments" && (
-                <div className="text-muted-foreground">Payment management coming soon...</div>
+                <div className="space-y-4">
+                  <Card className="backdrop-blur-sm bg-card/80">
+                    <CardHeader>
+                      <CardTitle>Payment Management</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">
+                        View and manage all payment transactions from students.
+                      </p>
+                      {statsLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center p-3 border rounded-md">
+                            <div>
+                              <p className="font-medium">Total Revenue</p>
+                              <p className="text-sm text-muted-foreground">All time</p>
+                            </div>
+                            <p className="text-2xl font-bold">${stats?.totalRevenue || 0}</p>
+                          </div>
+                          <div className="flex justify-between items-center p-3 border rounded-md">
+                            <div>
+                              <p className="font-medium">Pending Payments</p>
+                              <p className="text-sm text-muted-foreground">Awaiting confirmation</p>
+                            </div>
+                            <p className="text-2xl font-bold">{stats?.pendingPayments || 0}</p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               )}
               {activeSection === "users" && (
-                <div className="text-muted-foreground">User management coming soon...</div>
+                <div className="space-y-4">
+                  <Card className="backdrop-blur-sm bg-card/80">
+                    <CardHeader>
+                      <CardTitle>User Management</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">
+                        View and manage all registered users on the platform.
+                      </p>
+                      {statsLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center p-3 border rounded-md">
+                            <div>
+                              <p className="font-medium">Total Users</p>
+                              <p className="text-sm text-muted-foreground">All registered users</p>
+                            </div>
+                            <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
+                          </div>
+                          <div className="flex justify-between items-center p-3 border rounded-md">
+                            <div>
+                              <p className="font-medium">Total Courses</p>
+                              <p className="text-sm text-muted-foreground">Available courses</p>
+                            </div>
+                            <p className="text-2xl font-bold">{stats?.totalCourses || 0}</p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               )}
               {activeSection === "settings" && (
-                <div className="text-muted-foreground">Settings coming soon...</div>
+                <div className="space-y-4">
+                  <Card className="backdrop-blur-sm bg-card/80">
+                    <CardHeader>
+                      <CardTitle>Platform Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">
+                        Configure platform settings and preferences.
+                      </p>
+                      <div className="space-y-3">
+                        <div className="p-3 border rounded-md">
+                          <p className="font-medium mb-1">Contact Email</p>
+                          <p className="text-sm text-muted-foreground">panoramac215@gmail.com</p>
+                        </div>
+                        <div className="p-3 border rounded-md">
+                          <p className="font-medium mb-1">Platform Name</p>
+                          <p className="text-sm text-muted-foreground">panoramac Maths Tutors</p>
+                        </div>
+                        <div className="p-3 border rounded-md">
+                          <p className="font-medium mb-1">Phone Number</p>
+                          <p className="text-sm text-muted-foreground">+2637 1369 3824</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
             </div>
           </main>
