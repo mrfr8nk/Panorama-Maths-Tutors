@@ -14,7 +14,7 @@ export default function About() {
               About Us
             </h1>
             <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-              Panoramac Maths Tutors is dedicated to providing exceptional mathematics education 
+              Panorama Maths Tutors is dedicated to providing exceptional mathematics education 
               for students at all levels across Zimbabwe and beyond.
             </p>
           </div>

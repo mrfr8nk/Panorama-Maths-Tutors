@@ -1,8 +1,8 @@
-# Panoramac Maths Tutors Platform
+# Panorama Maths Tutors Platform
 
 ## Overview
 
-Panoramac Maths Tutors is an educational platform for mathematics tutoring serving students in Zimbabwe and internationally. The platform supports ZIMSEC, Cambridge, and Tertiary level mathematics education through various delivery modes including online tutorials, evening sessions, one-on-one tutoring, and home visits.
+Panorama Maths Tutors is an educational platform for mathematics tutoring serving students in Zimbabwe and internationally. The platform supports ZIMSEC, Cambridge, and Tertiary level mathematics education through various delivery modes including online tutorials, evening sessions, one-on-one tutoring, and home visits.
 
 The application is built as a full-stack web platform with a React frontend using modern UI components and a Node.js/Express backend. It features role-based access control (student, tutor, admin), course management, mobile payment integration, and file hosting capabilities.
 
@@ -10,7 +10,7 @@ The application is built as a full-stack web platform with a React frontend usin
 
 ## Recent Changes (November 2025)
 
-- **Branding Update:** All references changed from "Panorama" to "Panoramac", contact email updated to panoramac215@gmail.com
+- **Branding Update:** All references changed to "Panorama", contact email is panoramac215@gmail.com
 - **Database Migration:** Removed PostgreSQL/Drizzle artifacts, fully implemented MongoDB with Mongoose
 - **Authentication Improvements:** 
   - Removed role selection from registration (defaults to 'student')

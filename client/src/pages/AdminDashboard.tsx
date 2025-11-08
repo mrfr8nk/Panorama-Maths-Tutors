@@ -186,7 +186,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="p-3 border rounded-md">
                           <p className="font-medium mb-1">Platform Name</p>
-                          <p className="text-sm text-muted-foreground">Panoramac Maths Tutors</p>
+                          <p className="text-sm text-muted-foreground">Panorama Maths Tutors</p>
                         </div>
                         <div className="p-3 border rounded-md">
                           <p className="font-medium mb-1">Phone Number</p>
