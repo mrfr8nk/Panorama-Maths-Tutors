@@ -67,7 +67,7 @@ export default function AuthForm() {
   return (
     <Card className="w-full max-w-md backdrop-blur-md bg-card/90">
       <CardHeader>
-        <CardTitle className="font-heading text-2xl text-center">Welcome to panoramac</CardTitle>
+        <CardTitle className="font-heading text-2xl text-center">Welcome to Panoramac</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="login" className="w-full">

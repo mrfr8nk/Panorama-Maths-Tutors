@@ -32,7 +32,7 @@ export default function Header() {
             <div className="flex items-center gap-2 cursor-pointer hover-elevate px-3 py-2 rounded-md" data-testid="link-home">
               <BookOpen className="w-8 h-8 text-primary" />
               <div className="flex flex-col">
-                <span className="font-heading font-bold text-lg text-foreground">panoramac</span>
+                <span className="font-heading font-bold text-lg text-foreground">Panoramac</span>
                 <span className="font-heading text-xs text-muted-foreground -mt-1">Maths Tutors</span>
               </div>
             </div>
