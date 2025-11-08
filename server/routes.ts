@@ -300,8 +300,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Unauthorized" });
       }
 
-      if (payment.status === 'completed') {
-        return res.json({ status: 'completed' });
+      if (payment.status === 'success') {
+        return res.json({ status: 'success' });
       }
 
       if (payment.paynowPollUrl) {
@@ -309,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const status = await checkPaymentStatus(payment.paynowPollUrl);
           
           if (status.paid) {
-            payment.status = 'completed';
+            payment.status = 'success';
             await payment.save();
 
             // Enroll user in course
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Increment course enrollments
             await Course.findByIdAndUpdate(payment.courseId, { $inc: { enrollments: 1 } });
 
-            return res.json({ status: 'completed' });
+            return res.json({ status: 'success' });
           } else {
             return res.json({ status: payment.status });
           }
@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await Payment.findOne({ paynowReference: reference });
       if (payment) {
         if (status === 'Paid') {
-          payment.status = 'completed';
+          payment.status = 'success';
           await payment.save();
 
           // Enroll user
@@ -371,6 +371,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Users route for admin
+  app.get("/api/users", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const users = await User.find().select('-password').populate('enrolledCourses', 'title');
+      res.json(users);
+    } catch (error) {
+      console.error("Fetch users error:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   // Analytics route
   app.get("/api/analytics/stats", authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -379,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalPayments = await Payment.countDocuments();
       const pendingPayments = await Payment.countDocuments({ status: 'pending' });
       const totalRevenue = await Payment.aggregate([
-        { $match: { status: 'completed' } },
+        { $match: { status: 'success' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
       const totalEnrollments = await Course.aggregate([

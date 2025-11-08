@@ -4,6 +4,7 @@ import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, S
 import DashboardStats from "@/components/DashboardStats";
 import UploadModal from "@/components/UploadModal";
 import CourseTable from "@/components/CourseTable";
+import UsersTable from "@/components/UsersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -62,6 +63,10 @@ export default function AdminDashboard() {
                         onClick={() => {
                           setActiveSection(item.id);
                           if (item.id === "upload") setUploadModalOpen(true);
+                          // Close sidebar on mobile
+                          if (window.innerWidth < 768) {
+                            document.querySelector('[data-testid="button-sidebar-toggle"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                          }
                         }}
                         isActive={activeSection === item.id}
                         data-testid={`sidebar-${item.id}`}
@@ -83,6 +88,15 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="button-theme-toggle">
                 {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  localStorage.removeItem('auth_token');
+                  window.location.href = '/';
+                }}
+              >
+                Logout
               </Button>
             </div>
           </header>
@@ -140,7 +154,7 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-muted-foreground mb-4">
-                        View and manage all registered users on the platform.
+                        All registered students and tutors on the platform.
                       </p>
                       {statsLoading ? (
                         <div className="space-y-2">
@@ -148,22 +162,12 @@ export default function AdminDashboard() {
                           <Skeleton className="h-20 w-full" />
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-3 border rounded-md">
-                            <div>
-                              <p className="font-medium">Total Users</p>
-                              <p className="text-sm text-muted-foreground">All registered users</p>
-                            </div>
-                            <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
+                        <>
+                          <div className="mb-4 p-3 border rounded-md bg-muted/20">
+                            <p className="font-medium">Total Users: {stats?.totalUsers || 0}</p>
                           </div>
-                          <div className="flex justify-between items-center p-3 border rounded-md">
-                            <div>
-                              <p className="font-medium">Total Courses</p>
-                              <p className="text-sm text-muted-foreground">Available courses</p>
-                            </div>
-                            <p className="text-2xl font-bold">{stats?.totalCourses || 0}</p>
-                          </div>
-                        </div>
+                          <UsersTable />
+                        </>
                       )}
                     </CardContent>
                   </Card>

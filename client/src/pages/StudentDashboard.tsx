@@ -63,7 +63,13 @@ export default function StudentDashboard() {
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
+                        onClick={() => {
+                          setActiveSection(item.id);
+                          // Close sidebar on mobile
+                          if (window.innerWidth < 768) {
+                            document.querySelector('[data-testid="button-sidebar-toggle"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                          }
+                        }}
                         isActive={activeSection === item.id}
                         data-testid={`sidebar-${item.id}`}
                       >
@@ -85,6 +91,15 @@ export default function StudentDashboard() {
               <span className="text-sm text-muted-foreground">Welcome back, <span className="font-medium text-foreground">{user?.name || "Student"}</span></span>
               <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="button-theme-toggle">
                 {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  localStorage.removeItem('auth_token');
+                  window.location.href = '/';
+                }}
+              >
+                Logout
               </Button>
             </div>
           </header>
