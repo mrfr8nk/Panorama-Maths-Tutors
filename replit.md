@@ -10,6 +10,41 @@ The application is built as a full-stack web platform with a React frontend usin
 
 ## Recent Changes (November 2025)
 
+### Latest Updates (November 9, 2025)
+- **File Upload System Improvements:**
+  - Increased file size limit to 200MB with proper Multer configuration
+  - Created FileUpload MongoDB model to persist upload metadata (fileId, originalName, customName, mimeType, size, catboxUrl, uploadedBy, uploadedAt)
+  - Upload route now saves metadata to MongoDB and returns enriched response data
+  - Implemented proper error handling with 413 status code for oversized files
+  - CATBOX_USERHASH secret configured for secure CDN uploads
+  
+- **Admin Route Protection:**
+  - AdminDashboard now automatically redirects unauthenticated users to /auth
+  - Students attempting to access /admin are redirected to /student dashboard
+  - Both admin and tutor roles can access the admin panel
+  - Protection implemented using wouter's useLocation hook
+  
+- **Visitor Tracking System:**
+  - Created Visitor MongoDB model tracking ipAddress, userAgent, visitedAt, page
+  - Middleware automatically tracks all non-API GET requests for analytics
+  - Analytics endpoint expanded to include comprehensive traffic data:
+    * Total visitors and unique visitors (by IP address)
+    * Recent visitors (last 30 days) and today's visitor count
+    * Top 5 most visited pages
+    * Total file uploads and storage usage in MB
+    
+- **Dashboard Analytics Enhancements:**
+  - Expanded dashboard from 6 to 8 metric cards with real database data
+  - Added new cards: Website Visitors, Today's Traffic, Files Uploaded
+  - Removed all fake/mock revenue data - all metrics now sourced from MongoDB
+  - Properly typed analytics responses with TypeScript interfaces
+  
+- **Home Page Navigation:**
+  - Fixed CoursesOfferedSection to accept onViewCourses prop
+  - Both "View Courses" and "Get Started" buttons properly navigate to /courses
+  - Added data-testid attributes for automated testing
+
+### Earlier Updates (November 2025)
 - **Branding Update:** All references changed to "Panorama", contact email is panoramac215@gmail.com
 - **Database Migration:** Removed PostgreSQL/Drizzle artifacts, fully implemented MongoDB with Mongoose
 - **Authentication Improvements:** 
@@ -88,10 +123,20 @@ Preferred communication style: Simple, everyday language.
 - Password hashing using bcryptjs with salt rounds
 
 **File Upload Strategy:**
-- Multer middleware for multipart/form-data handling
+- Multer middleware for multipart/form-data handling with 200MB file size limit
 - In-memory storage buffer (no local disk usage)
-- External file hosting via Catbox.moe API
+- External file hosting via Catbox.moe API using CATBOX_USERHASH secret
+- FileUpload MongoDB model stores metadata: fileId, originalName, customName, mimeType, size, catboxUrl, uploadedBy, uploadedAt
+- Error handling returns 413 status for files exceeding size limit
 - PDF and video file support for course materials
+- Upload route saves metadata to MongoDB and returns enriched response with CDN URL
+
+**Visitor Tracking:**
+- Visitor MongoDB model tracks all page visits: ipAddress, userAgent, visitedAt, page
+- Middleware automatically logs non-API GET requests for analytics
+- Analytics aggregation provides visitor counts (total, unique by IP, recent, today)
+- Top pages tracking identifies most popular content
+- Used for dashboard traffic insights and platform usage metrics
 
 ### External Dependencies
 
@@ -102,10 +147,11 @@ Preferred communication style: Simple, everyday language.
 - Payment status polling mechanism for transaction verification
 
 **File Hosting:**
-- Catbox.moe free file hosting service
-- No API key required for uploads
+- Catbox.moe file hosting service (200MB per file)
+- CATBOX_USERHASH secret required for uploads
 - Returns direct file URLs for storage in database
-- Used for course PDFs and other downloadable materials
+- Used for course PDFs, video files, and other downloadable materials
+- Upload metadata persisted to MongoDB FileUpload collection
 
 **Database:**
 - MongoDB connection via MONGODB_URI environment variable
@@ -127,8 +173,16 @@ Preferred communication style: Simple, everyday language.
 **Environment Configuration:**
 - JWT_SECRET for token signing
 - MONGODB_URI for database connection
+- CATBOX_USERHASH for file uploads to Catbox CDN
 - PAYNOW_INTEGRATION_ID and PAYNOW_INTEGRATION_KEY for payments
 - PAYNOW_RESULT_URL and PAYNOW_RETURN_URL for payment callbacks
+
+**MongoDB Collections:**
+- **User:** Stores user accounts with role-based access (student, tutor, admin), enrolledCourses array
+- **Course:** Course content with type (ZIMSEC, Cambridge, Tertiary), status (Free/Premium), resourceType, fileUrl
+- **Payment:** Payment transactions with status tracking, amount, Paynow integration references
+- **FileUpload:** Upload metadata tracking fileId, size, mimeType, catboxUrl, uploadedBy for audit trail
+- **Visitor:** Page visit tracking with ipAddress, userAgent, visitedAt, page for analytics
 
 **Note on Database Configuration:**
 The repository includes Drizzle configuration (`drizzle.config.ts`) pointing to PostgreSQL, but the active implementation uses MongoDB with Mongoose. This suggests either a planned migration or legacy configuration. The code agent should be aware that adding PostgreSQL support would require implementing the Drizzle schema migrations and updating the data layer.
