@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/courses", authenticateToken, requireTutorOrAdmin, upload.single('file'), async (req: AuthRequest, res) => {
+  app.post("/api/courses", authenticateToken, requireTutorOrAdmin, async (req: AuthRequest, res) => {
     try {
       const validatedData = courseSchema.parse({
         ...req.body,
@@ -196,27 +196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const { title, description, type, status, price, youtubeLink, resourceType } = validatedData;
 
-      let fileUrl = '';
-      if (req.file) {
-        try {
-          // This part of the code is now redundant as the upload is handled by '/api/courses/upload'
-          // However, it's kept for now to avoid breaking existing functionality if not all clients
-          // have migrated to the new upload endpoint.
-          // A better approach would be to remove this and ensure all clients use the dedicated upload endpoint.
-          fileUrl = await uploadToCatbox(req.file.buffer, req.file.originalname);
-          console.log('File uploaded successfully to:', fileUrl);
-        } catch (uploadError: any) {
-          console.error("File upload error:", uploadError);
-          return res.status(500).json({ 
-            error: "Failed to upload file to Catbox", 
-            message: uploadError.message 
-          });
-        }
-      } else if (validatedData.resourceType === 'video' && validatedData.youtubeLink) {
-        // If it's a video course and youtubeLink is provided, use that.
-        fileUrl = validatedData.youtubeLink;
+      let fileUrl = req.body.fileUrl || '';
+      
+      // If it's a video lesson and youtubeLink is provided, use that
+      if (resourceType === 'Lesson' && youtubeLink) {
+        fileUrl = youtubeLink;
       }
-
 
       const course = new Course({
         title,
@@ -224,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type,
         status,
         price,
-        fileUrl, // This will now be the URL from /api/courses/upload or the youtubeLink
+        fileUrl,
         youtubeLink,
         resourceType,
         createdBy: req.userId

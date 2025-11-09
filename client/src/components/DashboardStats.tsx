@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, DollarSign, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Users, BookOpen, DollarSign, TrendingUp, Eye, UserPlus } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -30,31 +30,43 @@ export default function DashboardStats() {
     queryKey: ['/api/analytics/stats'],
   });
 
-  const displayStats = [
+  const statCards = [
     {
-      title: "Total Courses",
-      value: stats?.totalCourses || 0,
-      icon: BookOpen,
-      trend: "Active courses"
-    },
-    {
-      title: "Total Users",
+      title: "Total Students",
       value: stats?.totalUsers || 0,
       icon: Users,
-      trend: `+${stats?.recentUsers || 0} this month`
+      description: "Registered users"
     },
     {
-      title: "Revenue",
+      title: "Active Courses",
+      value: stats?.totalCourses || 0,
+      icon: BookOpen,
+      description: "Available courses"
+    },
+    {
+      title: "Total Revenue",
       value: `$${stats?.totalRevenue?.toFixed(2) || '0.00'}`,
       icon: DollarSign,
-      trend: "Total earnings"
+      description: "Completed payments"
     },
     {
       title: "Enrollments",
       value: stats?.totalEnrollments || 0,
       icon: TrendingUp,
-      trend: `+${stats?.recentEnrollments || 0} this month`
+      description: "Course enrollments"
     },
+    {
+      title: "New Users (30d)",
+      value: stats?.recentUsers || 0,
+      icon: UserPlus,
+      description: "Last 30 days"
+    },
+    {
+      title: "Recent Enrollments",
+      value: stats?.recentEnrollments || 0,
+      icon: Eye,
+      description: "Last 30 days"
+    }
   ];
 
   if (isLoading) {
@@ -69,13 +81,13 @@ export default function DashboardStats() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {displayStats.map((stat, index) => (
+      {statCards.map((stat, index) => (
         <StatCard
           key={index}
           title={stat.title}
           value={stat.value.toString()}
           icon={stat.icon}
-          trend={stat.trend}
+          trend={stat.description}
         />
       ))}
     </div>

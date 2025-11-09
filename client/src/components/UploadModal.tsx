@@ -1,11 +1,11 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, File, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Upload, File, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { courseApi } from "@/lib/api";
@@ -26,55 +26,140 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     youtubeLink: "",
     resourceType: "PDF"
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return await courseApi.create(data);
+      setUploadProgress(0);
+
+      // If we have files, upload them first to get CDN URLs
+      const fileUrls: string[] = [];
+      const files = data.getAll('file') as File[];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+
+        // Simulate Catbox API upload
+        const uploadRes = await fetch("/api/courses/upload", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+          },
+          body: fileFormData
+        });
+
+        if (!uploadRes.ok) {
+          const error = await uploadRes.json();
+          throw new Error(error.error || "Failed to upload file");
+        }
+
+        const uploadData = await uploadRes.json();
+        fileUrls.push(uploadData.url);
+
+        // Update progress
+        setUploadProgress(((i + 1) / files.length) * 50);
+      }
+
+      // Now create the course with the CDN URL
+      const courseData = new FormData();
+      courseData.append('title', data.get('title') as string);
+      courseData.append('description', data.get('description') as string);
+      courseData.append('type', data.get('type') as string);
+      courseData.append('status', data.get('status') as string);
+      courseData.append('resourceType', data.get('resourceType') as string);
+
+      if (data.get('price')) {
+        courseData.append('price', data.get('price') as string);
+      }
+
+      if (data.get('youtubeLink')) {
+        courseData.append('youtubeLink', data.get('youtubeLink') as string);
+      }
+
+      // Use the first uploaded file URL for the course
+      if (fileUrls.length > 0) {
+        courseData.append('fileUrl', fileUrls[0]);
+      }
+
+      setUploadProgress(75);
+
+      const res = await fetch("/api/courses", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+        },
+        body: courseData
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create course");
+      }
+
+      setUploadProgress(100);
+      return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Content uploaded successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
-      onOpenChange(false);
-      setFormData({ title: "", description: "", type: "ZIMSEC", status: "Free", price: "", youtubeLink: "", resourceType: "PDF" });
-      setSelectedFile(null);
+      toast({ title: "Content uploaded successfully!" });
+      setTimeout(() => {
+        onOpenChange(false);
+        setFormData({ title: "", description: "", type: "ZIMSEC", status: "Free", price: "", youtubeLink: "", resourceType: "PDF" });
+        setSelectedFiles([]);
+        setUploadProgress(0);
+      }, 500);
     },
     onError: (error: any) => {
       const errorMsg = error.response?.data?.message || error.response?.data?.error || "Failed to upload content";
-      toast({ 
-        title: "Upload failed", 
+      toast({
+        title: "Upload failed",
         description: errorMsg,
-        variant: "destructive" 
+        variant: "destructive"
       });
+      setUploadProgress(0);
       console.error('Upload error:', error);
     }
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const submitData = new FormData();
     submitData.append('title', formData.title);
     submitData.append('description', formData.description);
     submitData.append('type', formData.type);
     submitData.append('status', formData.status);
     submitData.append('resourceType', formData.resourceType);
-    
+
     if (formData.status === "Premium" && formData.price) {
       submitData.append('price', formData.price);
     }
-    
+
     if (formData.youtubeLink) {
       submitData.append('youtubeLink', formData.youtubeLink);
     }
-    
-    if (selectedFile) {
-      submitData.append('file', selectedFile);
-    }
+
+    selectedFiles.forEach(file => {
+      submitData.append('file', file);
+    });
 
     uploadMutation.mutate(submitData);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(filesArray);
+    }
+  };
+
+  const removeFile = (fileName: string) => {
+    setSelectedFiles(selectedFiles.filter(file => file.name !== fileName));
   };
 
   return (
@@ -83,7 +168,14 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl">Upload Course Content</DialogTitle>
         </DialogHeader>
-        
+
+        {uploadProgress > 0 && (
+          <div className="space-y-2">
+            <Label>Upload Progress</Label>
+            <Progress value={uploadProgress} />
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
@@ -94,9 +186,10 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               placeholder="Course title"
               required
               data-testid="input-upload-title"
+              disabled={uploadMutation.isPending}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
             <Textarea
@@ -107,15 +200,17 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               rows={3}
               required
               data-testid="input-upload-description"
+              disabled={uploadMutation.isPending}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="courseType">Course Type *</Label>
-              <Select 
-                value={formData.type} 
+              <Select
+                value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
+                disabled={uploadMutation.isPending}
               >
                 <SelectTrigger data-testid="select-course-type">
                   <SelectValue />
@@ -127,12 +222,13 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="resourceType">Resource Type *</Label>
-              <Select 
-                value={formData.resourceType} 
+              <Select
+                value={formData.resourceType}
                 onValueChange={(value) => setFormData({ ...formData, resourceType: value })}
+                disabled={uploadMutation.isPending}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -145,12 +241,13 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               </Select>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="status">Course Status *</Label>
-            <Select 
-              value={formData.status} 
+            <Select
+              value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value })}
+              disabled={uploadMutation.isPending}
             >
               <SelectTrigger data-testid="select-status">
                 <SelectValue />
@@ -161,7 +258,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               </SelectContent>
             </Select>
           </div>
-          
+
           {formData.status === "Premium" && (
             <div className="space-y-2">
               <Label htmlFor="price">Price (USD) *</Label>
@@ -172,42 +269,64 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 placeholder="25.00"
                 type="number"
                 step="0.01"
-                required
+                required={formData.status === "Premium"}
                 data-testid="input-price"
+                disabled={uploadMutation.isPending}
               />
             </div>
           )}
-          
+
           {(formData.resourceType === "PDF" || formData.resourceType === "Video") && (
             <div className="space-y-2">
-              <Label htmlFor="file">Upload File (PDF/Video) *</Label>
+              <Label htmlFor="file">Upload File(s) ({formData.resourceType}) *</Label>
               <div className="border-2 border-dashed border-border rounded-md p-6 text-center hover-elevate cursor-pointer">
                 <input
                   type="file"
                   id="file"
                   className="hidden"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  onChange={handleFileChange}
                   accept={formData.resourceType === "PDF" ? ".pdf" : ".mp4,.mov,.avi"}
-                  required
+                  multiple={true}
+                  required={selectedFiles.length === 0}
                   data-testid="input-file"
+                  disabled={uploadMutation.isPending}
                 />
-                <label htmlFor="file" className="cursor-pointer">
-                  {selectedFile ? (
-                    <div className="flex items-center justify-center gap-2 text-primary">
-                      <File className="w-5 h-5" />
-                      <span className="text-sm font-medium">{selectedFile.name}</span>
-                    </div>
-                  ) : (
+                <label htmlFor="file" className="cursor-pointer w-full h-full flex items-center justify-center">
+                  {selectedFiles.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Upload className="w-8 h-8" />
                       <span className="text-sm">Click to upload {formData.resourceType}</span>
                     </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      {selectedFiles.map((file) => (
+                        <div key={file.name} className="flex items-center justify-between w-full text-primary">
+                          <div className="flex items-center gap-2">
+                            <File className="w-5 h-5" />
+                            <span className="text-sm font-medium">{file.name}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFile(file.name)}
+                            disabled={uploadMutation.isPending}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </label>
               </div>
+              {selectedFiles.length > 0 && (
+                <div className="text-xs text-muted-foreground mt-2">
+                  {selectedFiles.length} file(s) selected.
+                </div>
+              )}
             </div>
           )}
-          
+
           {formData.resourceType === "Lesson" && (
             <div className="space-y-2">
               <Label htmlFor="youtube">YouTube Link *</Label>
@@ -216,33 +335,36 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 value={formData.youtubeLink}
                 onChange={(e) => setFormData({ ...formData, youtubeLink: e.target.value })}
                 placeholder="https://youtube.com/watch?v=..."
-                required
+                required={formData.resourceType === "Lesson"}
                 data-testid="input-youtube"
+                disabled={uploadMutation.isPending}
               />
             </div>
           )}
-          
+
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
               className="flex-1"
-              disabled={uploadMutation.isPending}
+              disabled={uploadMutation.isPending || uploadProgress > 0}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              className="flex-1" 
-              disabled={uploadMutation.isPending}
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={uploadMutation.isPending || (uploadProgress > 0 && uploadProgress < 100)}
               data-testid="button-upload-submit"
             >
               {uploadMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  Processing...
                 </>
+              ) : uploadProgress === 100 ? (
+                "Uploaded"
               ) : (
                 "Upload Content"
               )}
