@@ -74,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           await adminUser.save();
         }
-        
+
         const token = generateToken(String(adminUser._id), adminUser.role);
         return res.json({
           token,
@@ -157,6 +157,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload course content
+  app.post('/api/courses/upload', authenticateToken, requireTutorOrAdmin, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log('Uploading file:', req.file.originalname, 'Size:', req.file.size);
+
+      const result = await uploadToCatbox(
+        req.file.buffer, 
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      if (!result.success) {
+        console.error('Catbox upload failed:', result.error);
+        return res.status(500).json({ error: result.error || 'Failed to upload file to CDN' });
+      }
+
+      res.json({ 
+        success: true,
+        url: result.cdnUrl,
+        fileId: result.fileId
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      res.status(500).json({ error: error.message || 'Failed to upload file' });
+    }
+  });
+
   app.post("/api/courses", authenticateToken, requireTutorOrAdmin, upload.single('file'), async (req: AuthRequest, res) => {
     try {
       const validatedData = courseSchema.parse({
@@ -168,6 +199,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let fileUrl = '';
       if (req.file) {
         try {
+          // This part of the code is now redundant as the upload is handled by '/api/courses/upload'
+          // However, it's kept for now to avoid breaking existing functionality if not all clients
+          // have migrated to the new upload endpoint.
+          // A better approach would be to remove this and ensure all clients use the dedicated upload endpoint.
           fileUrl = await uploadToCatbox(req.file.buffer, req.file.originalname);
           console.log('File uploaded successfully to:', fileUrl);
         } catch (uploadError: any) {
@@ -177,7 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: uploadError.message 
           });
         }
+      } else if (validatedData.resourceType === 'video' && validatedData.youtubeLink) {
+        // If it's a video course and youtubeLink is provided, use that.
+        fileUrl = validatedData.youtubeLink;
       }
+
 
       const course = new Course({
         title,
@@ -185,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type,
         status,
         price,
-        fileUrl,
+        fileUrl, // This will now be the URL from /api/courses/upload or the youtubeLink
         youtubeLink,
         resourceType,
         createdBy: req.userId
@@ -311,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (payment.paynowPollUrl) {
         try {
           const status = await checkPaymentStatus(payment.paynowPollUrl);
-          
+
           if (status.paid) {
             payment.status = 'success';
             await payment.save();
@@ -346,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/paynow/result", express.urlencoded({ extended: true }), async (req, res) => {
     try {
       const { reference, paynowreference, status } = req.body;
-      
+
       const payment = await Payment.findOne({ paynowReference: reference });
       if (payment) {
         if (status === 'Paid') {
@@ -386,32 +425,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Analytics route
-  app.get("/api/analytics/stats", authenticateToken, requireAdmin, async (req, res) => {
+  // Analytics endpoint
+  app.get('/api/analytics/stats', authenticateToken, requireAdmin, async (_req: AuthRequest, res) => {
     try {
       const totalUsers = await User.countDocuments();
       const totalCourses = await Course.countDocuments();
       const totalPayments = await Payment.countDocuments();
-      const pendingPayments = await Payment.countDocuments({ status: 'pending' });
-      const totalRevenue = await Payment.aggregate([
-        { $match: { status: 'success' } },
+      const completedPayments = await Payment.countDocuments({ status: 'completed' });
+
+      const revenueResult = await Payment.aggregate([
+        { $match: { status: 'completed' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]);
-      const totalEnrollments = await Course.aggregate([
-        { $group: { _id: null, total: { $sum: '$enrollments' } } }
+
+      const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+      const enrollmentResult = await User.aggregate([
+        { $unwind: '$enrolledCourses' },
+        { $count: 'total' }
       ]);
+
+      const totalEnrollments = enrollmentResult.length > 0 ? enrollmentResult[0].total : 0;
+
+      // Get recent activity counts (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentUsers = await User.countDocuments({ 
+        createdAt: { $gte: thirtyDaysAgo } 
+      });
+
+      const recentEnrollments = await Payment.countDocuments({ 
+        createdAt: { $gte: thirtyDaysAgo },
+        status: 'completed'
+      });
 
       res.json({
         totalUsers,
         totalCourses,
-        totalPayments,
-        pendingPayments,
-        totalRevenue: totalRevenue[0]?.total || 0,
-        totalEnrollments: totalEnrollments[0]?.total || 0
+        totalPayments: completedPayments,
+        pendingPayments: totalPayments - completedPayments,
+        totalRevenue,
+        totalEnrollments,
+        recentUsers,
+        recentEnrollments
       });
-    } catch (error) {
-      console.error("Analytics error:", error);
-      res.status(500).json({ error: "Failed to fetch analytics" });
+    } catch (error: any) {
+      console.error('Analytics error:', error);
+      res.status(500).json({ error: 'Failed to fetch analytics' });
     }
   });
 

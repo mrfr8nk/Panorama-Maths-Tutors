@@ -10,7 +10,7 @@ interface HeroSectionProps {
 export function HeroSection({ onViewCourses, onGetStarted }: HeroSectionProps) {
   return (
     <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${heroImage})` }}
       />
@@ -23,7 +23,7 @@ export function HeroSection({ onViewCourses, onGetStarted }: HeroSectionProps) {
               Master Maths with Confidence
             </h1>
             <p className="text-lg md:text-xl text-white/90 mb-8">
-              Professional tutoring for ZIMSEC, Cambridge, and Tertiary Mathematics. 
+              Professional tutoring for ZIMSEC, Cambridge, and Tertiary Mathematics.
               Excel in your studies with expert guidance.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">

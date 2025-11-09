@@ -4,16 +4,25 @@ import FormData from 'form-data';
 
 const CATBOX_USERHASH = process.env.CATBOX_USERHASH || '61101e1ef85d3a146d5841cee';
 
-export async function uploadToCatbox(fileBuffer: Buffer, originalFilename: string): Promise<string> {
-  try {
-    console.log('Uploading to Catbox:', originalFilename, 'Size:', fileBuffer.length);
+interface UploadResult {
+  success: boolean;
+  cdnUrl?: string;
+  fileId?: string;
+  error?: string;
+}
 
+export async function uploadToCatbox(
+  fileBuffer: Buffer,
+  filename: string,
+  mimeType: string
+): Promise<UploadResult> {
+  try {
     const formData = new FormData();
     formData.append('reqtype', 'fileupload');
     formData.append('userhash', CATBOX_USERHASH);
     formData.append('fileToUpload', fileBuffer, {
-      filename: originalFilename,
-      contentType: 'application/octet-stream'
+      filename: filename,
+      contentType: mimeType
     });
 
     const response = await axios.post('https://catbox.moe/user/api.php', formData, {
@@ -29,15 +38,18 @@ export async function uploadToCatbox(fileBuffer: Buffer, originalFilename: strin
       throw new Error('Invalid response from Catbox: ' + catboxUrl);
     }
 
-    console.log('Catbox upload successful:', catboxUrl);
-    return catboxUrl;
-
+    const fileId = catboxUrl.split('/').pop() || '';
+    
+    return {
+      success: true,
+      cdnUrl: catboxUrl,
+      fileId: fileId
+    };
   } catch (error: any) {
-    console.error('Catbox upload error:', error.message);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    }
-    throw new Error(`Failed to upload file to Catbox: ${error.message}`);
+    console.error('Catbox upload error:', error);
+    return {
+      success: false,
+      error: error.message || 'Upload failed'
+    };
   }
 }

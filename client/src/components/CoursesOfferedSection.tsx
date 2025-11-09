@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { GraduationCap, BookOpen, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const courses = [
   {
@@ -19,6 +20,12 @@ const courses = [
   }
 ];
 
+// Placeholder for the onViewCourses function
+const onViewCourses = () => {
+  console.log("View All Courses button clicked!");
+  // In a real application, this would navigate to the courses page
+};
+
 export default function CoursesOfferedSection() {
   return (
     <section className="py-16 bg-card/30">
@@ -34,8 +41,8 @@ export default function CoursesOfferedSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {courses.map((course, index) => (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               className="backdrop-blur-md bg-background/80 border-2 border-card-border hover-elevate active-elevate-2 transition-all duration-300"
             >
               <CardHeader>
@@ -51,6 +58,12 @@ export default function CoursesOfferedSection() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <Button size="lg" className="font-medium" onClick={onViewCourses}>
+            View All Courses
+          </Button>
         </div>
       </div>
     </section>

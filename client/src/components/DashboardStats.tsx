@@ -35,13 +35,13 @@ export default function DashboardStats() {
       title: "Total Courses",
       value: stats?.totalCourses || 0,
       icon: BookOpen,
-      trend: "Live courses"
+      trend: "Active courses"
     },
     {
       title: "Total Users",
       value: stats?.totalUsers || 0,
       icon: Users,
-      trend: "Registered students"
+      trend: `+${stats?.recentUsers || 0} this month`
     },
     {
       title: "Revenue",
@@ -53,7 +53,7 @@ export default function DashboardStats() {
       title: "Enrollments",
       value: stats?.totalEnrollments || 0,
       icon: TrendingUp,
-      trend: "Course enrollments"
+      trend: `+${stats?.recentEnrollments || 0} this month`
     },
   ];
 
