@@ -1,9 +1,9 @@
 import { useLocation } from "wouter";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { HeroSection } from "@/components/HeroSection";
-import { CoursesOfferedSection } from "@/components/CoursesOfferedSection";
-import { StudyModeSection } from "@/components/StudyModeSection";
+import CoursesOfferedSection from "@/components/CoursesOfferedSection";
+import StudyModeSection from "@/components/StudyModeSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 

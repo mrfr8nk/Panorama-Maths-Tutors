@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, Sun } from "lucide-react";
 import DashboardStats from "@/components/DashboardStats";
@@ -26,16 +26,16 @@ export default function AdminDashboard() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
-  // Protect admin route
+  // Protect admin route - prevent students from accessing
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
-    } else if (user.role !== 'admin') {
-      navigate('/student');
+      setLocation('/auth');
+    } else if (user.role !== 'admin' && user.role !== 'tutor') {
+      setLocation('/student');
     }
-  }, [user, navigate]);
+  }, [user, setLocation]);
 
   // Show loading while checking auth
   if (!user) {
@@ -49,11 +49,15 @@ export default function AdminDashboard() {
     );
   }
 
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && user.role !== 'tutor') {
     return null;
   }
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<{
+    totalRevenue: number;
+    pendingPayments: number;
+    totalUsers: number;
+  }>({
     queryKey: ['/api/analytics/stats'],
   });
 

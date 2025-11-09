@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, BookOpen, DollarSign, TrendingUp, Eye, UserPlus } from "lucide-react";
+import { Users, BookOpen, DollarSign, TrendingUp, Eye, UserPlus, Globe, FileUp } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -25,8 +25,21 @@ function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
   );
 }
 
+interface AnalyticsStats {
+  totalUsers: number;
+  totalCourses: number;
+  totalRevenue: number;
+  totalEnrollments: number;
+  totalVisitors: number;
+  uniqueVisitors: number;
+  todayVisitors: number;
+  recentUsers: number;
+  totalUploads: number;
+  uploadSizeMB: number;
+}
+
 export default function DashboardStats() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<AnalyticsStats>({
     queryKey: ['/api/analytics/stats'],
   });
 
@@ -47,13 +60,25 @@ export default function DashboardStats() {
       title: "Total Revenue",
       value: `$${stats?.totalRevenue?.toFixed(2) || '0.00'}`,
       icon: DollarSign,
-      description: "Completed payments"
+      description: "Real revenue from payments"
     },
     {
       title: "Enrollments",
       value: stats?.totalEnrollments || 0,
       icon: TrendingUp,
-      description: "Course enrollments"
+      description: "Total course enrollments"
+    },
+    {
+      title: "Website Visitors",
+      value: stats?.totalVisitors || 0,
+      icon: Globe,
+      description: `${stats?.uniqueVisitors || 0} unique visitors`
+    },
+    {
+      title: "Today's Traffic",
+      value: stats?.todayVisitors || 0,
+      icon: Eye,
+      description: "Visitors today"
     },
     {
       title: "New Users (30d)",
@@ -62,17 +87,17 @@ export default function DashboardStats() {
       description: "Last 30 days"
     },
     {
-      title: "Recent Enrollments",
-      value: stats?.recentEnrollments || 0,
-      icon: Eye,
-      description: "Last 30 days"
+      title: "Files Uploaded",
+      value: stats?.totalUploads || 0,
+      icon: FileUp,
+      description: `${stats?.uploadSizeMB || 0}MB total`
     }
   ];
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-32 w-full" />
         ))}
       </div>

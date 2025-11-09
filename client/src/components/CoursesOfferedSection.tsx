@@ -20,13 +20,11 @@ const courses = [
   }
 ];
 
-// Placeholder for the onViewCourses function
-const onViewCourses = () => {
-  console.log("View All Courses button clicked!");
-  // In a real application, this would navigate to the courses page
-};
+interface CoursesOfferedSectionProps {
+  onViewCourses?: () => void;
+}
 
-export default function CoursesOfferedSection() {
+export default function CoursesOfferedSection({ onViewCourses }: CoursesOfferedSectionProps) {
   return (
     <section className="py-16 bg-card/30">
       <div className="container mx-auto px-4">
@@ -61,7 +59,7 @@ export default function CoursesOfferedSection() {
         </div>
 
         <div className="text-center mt-12">
-          <Button size="lg" className="font-medium" onClick={onViewCourses}>
+          <Button size="lg" className="font-medium" onClick={onViewCourses} data-testid="button-view-all-courses">
             View All Courses
           </Button>
         </div>

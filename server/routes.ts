@@ -6,17 +6,43 @@ import multer from "multer";
 import User from "./models/User";
 import Course from "./models/Course";
 import Payment from "./models/Payment";
+import FileUpload from "./models/FileUpload";
+import Visitor from "./models/Visitor";
 import { generateToken, authenticateToken, requireAdmin, requireTutorOrAdmin, AuthRequest } from "./middleware/auth";
 import { uploadToCatbox } from "./utils/catbox";
 import { initiateMobilePayment, checkPaymentStatus } from "./utils/paynow";
 import { connectDB } from "./db";
 import { registerSchema, loginSchema, courseSchema, paymentSchema } from "./validation";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 200 * 1024 * 1024 // 200MB limit
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Connect to MongoDB
   await connectDB();
+
+  // Visitor tracking middleware (track all page visits)
+  app.use((req, res, next) => {
+    // Only track GET requests to main pages (not API or assets)
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.includes('.')) {
+      const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+      const page = req.path;
+
+      // Save visitor asynchronously (don't block the request)
+      const visitor = new Visitor({
+        ipAddress,
+        userAgent,
+        page
+      });
+      visitor.save().catch(err => console.error('Visitor tracking error:', err));
+    }
+    next();
+  });
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
@@ -158,17 +184,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload course content
-  app.post('/api/courses/upload', authenticateToken, requireTutorOrAdmin, upload.single('file'), async (req: AuthRequest, res) => {
+  app.post('/api/courses/upload', authenticateToken, requireTutorOrAdmin, (req: AuthRequest, res, next) => {
+    upload.single('file')(req, res, (err: any) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ 
+            error: 'File too large. Maximum file size is 200MB.' 
+          });
+        }
+        return res.status(400).json({ 
+          error: `Upload error: ${err.message}` 
+        });
+      } else if (err) {
+        return res.status(500).json({ 
+          error: 'Failed to process upload' 
+        });
+      }
+      next();
+    });
+  }, async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      console.log('Uploading file:', req.file.originalname, 'Size:', req.file.size);
+      console.log('Uploading file:', req.file.originalname, 'Size:', req.file.size, 'bytes');
+
+      // Get custom filename from request body (if provided)
+      const customName = req.body.filename || req.file.originalname;
 
       const result = await uploadToCatbox(
         req.file.buffer, 
-        req.file.originalname,
+        customName,
         req.file.mimetype
       );
 
@@ -177,10 +224,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: result.error || 'Failed to upload file to CDN' });
       }
 
+      // Save file metadata to MongoDB
+      const fileUpload = new FileUpload({
+        fileId: result.fileId,
+        originalName: req.file.originalname,
+        customName: customName,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        catboxUrl: result.cdnUrl || '',
+        uploadedBy: req.userId
+      });
+
+      await fileUpload.save();
+      console.log('File metadata saved to MongoDB:', result.fileId);
+
       res.json({ 
         success: true,
         url: result.cdnUrl,
-        fileId: result.fileId
+        fileId: result.fileId,
+        originalName: req.file.originalname,
+        customName: customName,
+        size: req.file.size,
+        mimeType: req.file.mimetype
       });
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -445,6 +510,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'completed'
       });
 
+      // Website traffic insights
+      const totalVisitors = await Visitor.countDocuments();
+      
+      // Unique visitors (by IP)
+      const uniqueVisitorsResult = await Visitor.aggregate([
+        { $group: { _id: '$ipAddress' } },
+        { $count: 'total' }
+      ]);
+      const uniqueVisitors = uniqueVisitorsResult.length > 0 ? uniqueVisitorsResult[0].total : 0;
+
+      // Recent visitors (last 30 days)
+      const recentVisitors = await Visitor.countDocuments({ 
+        visitedAt: { $gte: thirtyDaysAgo } 
+      });
+
+      // Today's visitors
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayVisitors = await Visitor.countDocuments({ 
+        visitedAt: { $gte: today } 
+      });
+
+      // Most visited pages
+      const topPages = await Visitor.aggregate([
+        { $group: { _id: '$page', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]);
+
+      // Total file uploads
+      const totalUploads = await FileUpload.countDocuments();
+      const totalUploadSize = await FileUpload.aggregate([
+        { $group: { _id: null, total: { $sum: '$size' } } }
+      ]);
+      const uploadSizeBytes = totalUploadSize.length > 0 ? totalUploadSize[0].total : 0;
+
       res.json({
         totalUsers,
         totalCourses,
@@ -453,7 +554,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue,
         totalEnrollments,
         recentUsers,
-        recentEnrollments
+        recentEnrollments,
+        // Traffic insights
+        totalVisitors,
+        uniqueVisitors,
+        recentVisitors,
+        todayVisitors,
+        topPages,
+        // Upload insights
+        totalUploads,
+        uploadSizeMB: Math.round(uploadSizeBytes / (1024 * 1024))
       });
     } catch (error: any) {
       console.error('Analytics error:', error);
