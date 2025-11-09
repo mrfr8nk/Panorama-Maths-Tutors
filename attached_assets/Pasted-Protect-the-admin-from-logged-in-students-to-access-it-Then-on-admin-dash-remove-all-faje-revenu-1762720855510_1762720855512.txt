@@ -1,0 +1,270 @@
+Protect the /admin from logged in students to access it
+
+Then on /admin dash  remove all faje revenuebdata and showball website
+
+Trqficc insights like visutor count too and more working 
+Then lastly fix file upload issue
+
+Its says errir failed to upload use this sample function to upload and implement it pleass
+
+const express = require('express');
+const multer = require('multer');
+const axios = require('axios');
+const FormData = require('form-data');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Your Catbox user hash
+const CATBOX_USERHASH = '61101e1ef85d3a146d5841cee';
+
+// Configure multer for file uploads (200MB limit)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 200 * 1024 * 1024 // 200MB
+  }
+});
+
+// Enable CORS
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Store uploaded files metadata (in production, use a database)
+const fileDatabase = new Map();
+
+// Serve upload page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Catbox CDN Proxy',
+    version: '1.0.0',
+    endpoints: {
+      upload: 'POST /api/upload',
+      file: 'GET /file/:fileId',
+      list: 'GET /api/files',
+      delete: 'DELETE /api/file/:fileId'
+    }
+  });
+});
+
+// Upload endpoint with file renaming support
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No file uploaded' 
+      });
+    }
+
+    // Get custom filename from request body (if provided)
+    const customName = req.body.filename || req.file.originalname;
+    const fileExtension = path.extname(req.file.originalname);
+    const finalFilename = customName.endsWith(fileExtension) 
+      ? customName 
+      : customName + fileExtension;
+
+    console.log('Uploading file:', finalFilename, 'Size:', req.file.size);
+
+    // Create form data for Catbox
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('userhash', CATBOX_USERHASH);
+    formData.append('fileToUpload', req.file.buffer, {
+      filename: finalFilename,
+      contentType: req.file.mimetype
+    });
+
+    // Upload to Catbox
+    const response = await axios.post('https://catbox.moe/user/api.php', formData, {
+      headers: formData.getHeaders(),
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      timeout: 300000 // 5 minutes timeout
+    });
+
+    const catboxUrl = response.data.trim();
+    
+    if (!catboxUrl.startsWith('http')) {
+      throw new Error('Invalid response from Catbox: ' + catboxUrl);
+    }
+
+    console.log('Catbox upload successful:', catboxUrl);
+    
+    // Extract file ID from Catbox URL
+    const fileId = catboxUrl.split('/').pop();
+    
+    // Store metadata
+    const fileMetadata = {
+      fileId: fileId,
+      originalName: req.file.originalname,
+      customName: finalFilename,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      catboxUrl: catboxUrl,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    fileDatabase.set(fileId, fileMetadata);
+
+    // Return custom CDN URL
+    const cdnUrl = `${req.protocol}://${req.get('host')}/file/${fileId}`;
+
+    res.json({
+      success: true,
+      data: {
+        cdnUrl: cdnUrl,
+        fileId: fileId,
+        originalName: req.file.originalname,
+        customName: finalFilename,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+        uploadedAt: fileMetadata.uploadedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Upload failed',
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint - serves files through your domain
+app.get('/file/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const catboxUrl = `https://files.catbox.moe/${fileId}`;
+
+    console.log('Fetching file:', fileId);
+
+    // Get file metadata if available
+    const metadata = fileDatabase.get(fileId);
+
+    // Stream file from Catbox
+    const response = await axios.get(catboxUrl, {
+      responseType: 'stream',
+      timeout: 60000
+    });
+
+    // Set appropriate headers
+    if (metadata) {
+      res.setHeader('Content-Type', metadata.mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${metadata.customName}"`);
+    } else {
+      res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Stream the file
+    response.data.pipe(res);
+
+  } catch (error) {
+    console.error('File retrieval error:', error);
+    
+    if (error.response && error.response.status === 404) {
+      res.status(404).json({
+        success: false,
+        error: 'File not found',
+        message: 'The requested file does not exist'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'File retrieval failed',
+        message: error.message
+      });
+    }
+  }
+});
+
+// List all uploaded files (API endpoint)
+app.get('/api/files', (req, res) => {
+  const files = Array.from(fileDatabase.entries()).map(([fileId, metadata]) => ({
+    fileId,
+    cdnUrl: `${req.protocol}://${req.get('host')}/file/${fileId}`,
+    ...metadata
+  }));
+
+  res.json({
+    success: true,
+    total: files.length,
+    data: files
+  });
+});
+
+// Get single file info (API endpoint)
+app.get('/api/file/:fileId', (req, res) => {
+  const { fileId } = req.params;
+  const metadata = fileDatabase.get(fileId);
+  
+  if (metadata) {
+    res.json({
+      success: true,
+      data: {
+        fileId,
+        cdnUrl: `${req.protocol}://${req.get('host')}/file/${fileId}`,
+        ...metadata
+      }
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: 'File not found'
+    });
+  }
+});
+
+// Delete endpoint (API)
+app.delete('/api/file/:fileId', (req, res) => {
+  const { fileId } = req.params;
+  
+  if (fileDatabase.has(fileId)) {
+    fileDatabase.delete(fileId);
+    res.json({ 
+      success: true, 
+      message: 'File metadata deleted from CDN proxy' 
+    });
+  } else {
+    res.status(404).json({ 
+      success: false,
+      error: 'File not found' 
+    });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    message: err.message
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Catbox CDN Proxy running on port ${PORT}`);
+  console.log(`📦 Max file size: 200MB`);
+  console.log(`🔗 User hash: ${CATBOX_USERHASH}`);
+  console.log(`🌐 Upload page: http://localhost:${PORT}`);
+  console.log(`📡 API Docs: http://localhost:${PORT}/api/health`);
+});
+
+
+
+Vuew cuurse and the other button on hone should be clickable and work pleass
