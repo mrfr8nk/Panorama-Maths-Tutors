@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "wouter";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, Sun } from "lucide-react";
 import DashboardStats from "@/components/DashboardStats";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
   { title: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
@@ -23,10 +25,18 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Protect admin route
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      navigate('/student-dashboard');
+    }
+  }, [user, navigate]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/analytics/stats'],
-    enabled: activeSection === "payments" || activeSection === "users",
   });
 
   useEffect(() => {
@@ -64,8 +74,9 @@ export default function AdminDashboard() {
                           setActiveSection(item.id);
                           if (item.id === "upload") setUploadModalOpen(true);
                           // Close sidebar on mobile
-                          if (window.innerWidth < 768) {
-                            document.querySelector('[data-testid="button-sidebar-toggle"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                          const sidebarToggle = document.querySelector('[data-testid="button-sidebar-toggle"]') as HTMLElement;
+                          if (sidebarToggle && window.innerWidth < 768) {
+                            sidebarToggle.click();
                           }
                         }}
                         isActive={activeSection === item.id}

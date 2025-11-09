@@ -169,9 +169,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.file) {
         try {
           fileUrl = await uploadToCatbox(req.file.buffer, req.file.originalname);
-        } catch (uploadError) {
+          console.log('File uploaded successfully to:', fileUrl);
+        } catch (uploadError: any) {
           console.error("File upload error:", uploadError);
-          return res.status(500).json({ error: "Failed to upload file" });
+          return res.status(500).json({ 
+            error: "Failed to upload file to Catbox", 
+            message: uploadError.message 
+          });
         }
       }
 

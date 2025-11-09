@@ -42,11 +42,13 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
       setSelectedFile(null);
     },
     onError: (error: any) => {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || "Failed to upload content";
       toast({ 
         title: "Upload failed", 
-        description: error.response?.data?.error || "Failed to upload content",
+        description: errorMsg,
         variant: "destructive" 
       });
+      console.error('Upload error:', error);
     }
   });
 

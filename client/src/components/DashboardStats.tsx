@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, DollarSign, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatCardProps {
   title: string;
@@ -24,32 +26,58 @@ function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
 }
 
 export default function DashboardStats() {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['/api/analytics/stats'],
+  });
+
+  const displayStats = [
+    {
+      title: "Total Courses",
+      value: stats?.totalCourses || 0,
+      icon: BookOpen,
+      trend: "Live courses"
+    },
+    {
+      title: "Total Users",
+      value: stats?.totalUsers || 0,
+      icon: Users,
+      trend: "Registered students"
+    },
+    {
+      title: "Revenue",
+      value: `$${stats?.totalRevenue?.toFixed(2) || '0.00'}`,
+      icon: DollarSign,
+      trend: "Total earnings"
+    },
+    {
+      title: "Enrollments",
+      value: stats?.totalEnrollments || 0,
+      icon: TrendingUp,
+      trend: "Course enrollments"
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCard
-        title="Total Courses"
-        value="24"
-        icon={BookOpen}
-        trend="+3 this month"
-      />
-      <StatCard
-        title="Students Enrolled"
-        value="156"
-        icon={Users}
-        trend="+12 this week"
-      />
-      <StatCard
-        title="Revenue"
-        value="$2,450"
-        icon={DollarSign}
-        trend="+18% from last month"
-      />
-      <StatCard
-        title="Completion Rate"
-        value="87%"
-        icon={TrendingUp}
-        trend="+5% improvement"
-      />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {displayStats.map((stat, index) => (
+        <StatCard
+          key={index}
+          title={stat.title}
+          value={stat.value.toString()}
+          icon={stat.icon}
+          trend={stat.trend}
+        />
+      ))}
     </div>
   );
 }

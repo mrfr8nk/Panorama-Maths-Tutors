@@ -66,8 +66,9 @@ export default function StudentDashboard() {
                         onClick={() => {
                           setActiveSection(item.id);
                           // Close sidebar on mobile
-                          if (window.innerWidth < 768) {
-                            document.querySelector('[data-testid="button-sidebar-toggle"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                          const sidebarToggle = document.querySelector('[data-testid="button-sidebar-toggle"]') as HTMLElement;
+                          if (sidebarToggle && window.innerWidth < 768) {
+                            sidebarToggle.click();
                           }
                         }}
                         isActive={activeSection === item.id}
