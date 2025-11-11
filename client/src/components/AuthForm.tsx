@@ -27,9 +27,15 @@ export default function AuthForm() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(loginData.email, loginData.password);
+      const response = await login(loginData.email, loginData.password);
       toast({ title: "Logged in successfully!" });
-      setLocation("/student");
+      
+      const userRole = response?.role;
+      if (userRole === 'admin' || userRole === 'tutor') {
+        setLocation("/admin");
+      } else {
+        setLocation("/student");
+      }
     } catch (error: any) {
       toast({ 
         title: "Login failed", 
