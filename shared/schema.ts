@@ -13,7 +13,7 @@ export const courseTypeEnum = z.enum(["ZIMSEC", "Cambridge", "Tertiary"]);
 
 export const courseStatusEnum = z.enum(["Free", "Premium"]);
 
-export const resourceTypeEnum = z.enum(["PDF", "Video", "Lesson"]);
+export const resourceTypeEnum = z.enum(["PDF", "Video", "Image", "Audio", "Lesson"]);
 
 export const userSchema = z.object({
   _id: z.string(),

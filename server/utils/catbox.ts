@@ -1,8 +1,5 @@
-
 import axios from 'axios';
 import FormData from 'form-data';
-
-const CATBOX_USERHASH = process.env.CATBOX_USERHASH || '61101e1ef85d3a146d5841cee';
 
 interface UploadResult {
   success: boolean;
@@ -19,7 +16,6 @@ export async function uploadToCatbox(
   try {
     const formData = new FormData();
     formData.append('reqtype', 'fileupload');
-    formData.append('userhash', CATBOX_USERHASH);
     formData.append('fileToUpload', fileBuffer, {
       filename: filename,
       contentType: mimeType

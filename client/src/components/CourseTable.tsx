@@ -18,12 +18,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CourseTable() {
-  const { data: courses, isLoading } = useQuery({
+  const { data: courses, isLoading } = useQuery<any[]>({
     queryKey: ['/api/courses'],
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editCourse, setEditCourse] = useState<any | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -38,6 +49,22 @@ export default function CourseTable() {
       toast({
         title: "Delete failed",
         description: error.response?.data?.error || "Failed to delete course",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => courseApi.update(id, data),
+    onSuccess: () => {
+      toast({ title: "Course updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      setEditCourse(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error.response?.data?.error || "Failed to update course",
         variant: "destructive"
       });
     }
@@ -106,7 +133,7 @@ export default function CourseTable() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => toast({ title: "Edit feature coming soon" })}
+                        onClick={() => setEditCourse(course)}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -152,6 +179,149 @@ export default function CourseTable() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editCourse} onOpenChange={() => setEditCourse(null)}>
+        <DialogContent className="backdrop-blur-xl bg-card/95 max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-2xl">Edit Course</DialogTitle>
+          </DialogHeader>
+          {editCourse && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data: any = {
+                  title: formData.get('title'),
+                  description: formData.get('description'),
+                  type: formData.get('type'),
+                  status: formData.get('status'),
+                  resourceType: formData.get('resourceType'),
+                };
+                if (formData.get('price')) {
+                  data.price = parseFloat(formData.get('price') as string);
+                }
+                if (formData.get('youtubeLink')) {
+                  data.youtubeLink = formData.get('youtubeLink');
+                }
+                editMutation.mutate({ id: editCourse._id, data });
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Title *</Label>
+                <Input
+                  id="edit-title"
+                  name="title"
+                  defaultValue={editCourse.title}
+                  required
+                  data-testid="input-edit-title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description *</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  defaultValue={editCourse.description}
+                  rows={3}
+                  required
+                  data-testid="input-edit-description"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Course Type *</Label>
+                  <Select name="type" defaultValue={editCourse.type}>
+                    <SelectTrigger data-testid="select-edit-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ZIMSEC">ZIMSEC</SelectItem>
+                      <SelectItem value="Cambridge">Cambridge</SelectItem>
+                      <SelectItem value="Tertiary">Tertiary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Resource Type *</Label>
+                  <Select name="resourceType" defaultValue={editCourse.resourceType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PDF">PDF Document</SelectItem>
+                      <SelectItem value="Video">Video File</SelectItem>
+                      <SelectItem value="Image">Image File</SelectItem>
+                      <SelectItem value="Audio">Audio File</SelectItem>
+                      <SelectItem value="Lesson">YouTube Lesson</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Course Status *</Label>
+                <Select name="status" defaultValue={editCourse.status}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Free">Free</SelectItem>
+                    <SelectItem value="Premium">Premium (Paid)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Price (USD)</Label>
+                <Input
+                  id="edit-price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  defaultValue={editCourse.price || ''}
+                  placeholder="25.00"
+                  data-testid="input-edit-price"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-youtube">YouTube Link</Label>
+                <Input
+                  id="edit-youtube"
+                  name="youtubeLink"
+                  defaultValue={editCourse.youtubeLink || ''}
+                  placeholder="https://youtube.com/watch?v=..."
+                  data-testid="input-edit-youtube"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditCourse(null)}
+                  className="flex-1"
+                  disabled={editMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={editMutation.isPending}
+                  data-testid="button-edit-submit"
+                >
+                  {editMutation.isPending ? "Updating..." : "Update Course"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

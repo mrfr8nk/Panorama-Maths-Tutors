@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UsersTable() {
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading } = useQuery<any[]>({
     queryKey: ['/api/users'],
   });
 

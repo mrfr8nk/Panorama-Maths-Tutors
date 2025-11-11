@@ -236,6 +236,8 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 <SelectContent>
                   <SelectItem value="PDF">PDF Document</SelectItem>
                   <SelectItem value="Video">Video File</SelectItem>
+                  <SelectItem value="Image">Image File</SelectItem>
+                  <SelectItem value="Audio">Audio File</SelectItem>
                   <SelectItem value="Lesson">YouTube Lesson</SelectItem>
                 </SelectContent>
               </Select>
@@ -276,7 +278,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
             </div>
           )}
 
-          {(formData.resourceType === "PDF" || formData.resourceType === "Video") && (
+          {formData.resourceType !== "Lesson" && (
             <div className="space-y-2">
               <Label htmlFor="file">Upload File(s) ({formData.resourceType}) *</Label>
               <div className="border-2 border-dashed border-border rounded-md p-6 text-center hover-elevate cursor-pointer">
@@ -285,7 +287,13 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                   id="file"
                   className="hidden"
                   onChange={handleFileChange}
-                  accept={formData.resourceType === "PDF" ? ".pdf" : ".mp4,.mov,.avi"}
+                  accept={
+                    formData.resourceType === "PDF" ? ".pdf" :
+                    formData.resourceType === "Video" ? ".mp4,.mov,.avi,.mkv,.webm,.flv" :
+                    formData.resourceType === "Image" ? ".jpg,.jpeg,.png,.gif,.webp" :
+                    formData.resourceType === "Audio" ? ".mp3,.wav,.ogg,.m4a,.aac,.flac" :
+                    "*"
+                  }
                   multiple={true}
                   required={selectedFiles.length === 0}
                   data-testid="input-file"
