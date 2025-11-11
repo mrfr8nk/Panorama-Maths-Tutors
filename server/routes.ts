@@ -255,10 +255,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses", authenticateToken, requireTutorOrAdmin, async (req: AuthRequest, res) => {
     try {
-      const validatedData = courseSchema.parse({
+      const { createCourseSchema } = await import("./validation");
+      const dataToValidate = {
         ...req.body,
-        price: req.body.price ? parseFloat(req.body.price) : undefined
-      });
+        price: req.body.price ? parseFloat(req.body.price) : undefined,
+        youtubeLink: req.body.youtubeLink || ''
+      };
+      const validatedData = createCourseSchema.parse(dataToValidate);
       const { title, description, type, status, price, youtubeLink, resourceType } = validatedData;
 
       let fileUrl = req.body.fileUrl || '';
@@ -290,9 +293,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/courses/:id", authenticateToken, requireTutorOrAdmin, async (req: AuthRequest, res) => {
     try {
+      const { updateCourseSchema } = await import("./validation");
+      const dataToValidate = {
+        ...req.body,
+        price: req.body.price ? parseFloat(req.body.price) : undefined,
+        youtubeLink: req.body.youtubeLink || ''
+      };
+      const validatedData = updateCourseSchema.parse(dataToValidate);
+      
       const course = await Course.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        validatedData,
         { new: true }
       );
       if (!course) {

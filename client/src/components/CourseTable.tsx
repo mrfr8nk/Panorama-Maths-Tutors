@@ -185,143 +185,155 @@ export default function CourseTable() {
           <DialogHeader>
             <DialogTitle className="font-heading text-2xl">Edit Course</DialogTitle>
           </DialogHeader>
-          {editCourse && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const data: any = {
-                  title: formData.get('title'),
-                  description: formData.get('description'),
-                  type: formData.get('type'),
-                  status: formData.get('status'),
-                  resourceType: formData.get('resourceType'),
-                };
-                if (formData.get('price')) {
-                  data.price = parseFloat(formData.get('price') as string);
-                }
-                if (formData.get('youtubeLink')) {
-                  data.youtubeLink = formData.get('youtubeLink');
-                }
-                editMutation.mutate({ id: editCourse._id, data });
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="edit-title">Title *</Label>
-                <Input
-                  id="edit-title"
-                  name="title"
-                  defaultValue={editCourse.title}
-                  required
-                  data-testid="input-edit-title"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description *</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  defaultValue={editCourse.description}
-                  rows={3}
-                  required
-                  data-testid="input-edit-description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Course Type *</Label>
-                  <Select name="type" defaultValue={editCourse.type}>
-                    <SelectTrigger data-testid="select-edit-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ZIMSEC">ZIMSEC</SelectItem>
-                      <SelectItem value="Cambridge">Cambridge</SelectItem>
-                      <SelectItem value="Tertiary">Tertiary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Resource Type *</Label>
-                  <Select name="resourceType" defaultValue={editCourse.resourceType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PDF">PDF Document</SelectItem>
-                      <SelectItem value="Video">Video File</SelectItem>
-                      <SelectItem value="Image">Image File</SelectItem>
-                      <SelectItem value="Audio">Audio File</SelectItem>
-                      <SelectItem value="Lesson">YouTube Lesson</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Course Status *</Label>
-                <Select name="status" defaultValue={editCourse.status}>
-                  <SelectTrigger data-testid="select-edit-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Free">Free</SelectItem>
-                    <SelectItem value="Premium">Premium (Paid)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-price">Price (USD)</Label>
-                <Input
-                  id="edit-price"
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  defaultValue={editCourse.price || ''}
-                  placeholder="25.00"
-                  data-testid="input-edit-price"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-youtube">YouTube Link</Label>
-                <Input
-                  id="edit-youtube"
-                  name="youtubeLink"
-                  defaultValue={editCourse.youtubeLink || ''}
-                  placeholder="https://youtube.com/watch?v=..."
-                  data-testid="input-edit-youtube"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditCourse(null)}
-                  className="flex-1"
-                  disabled={editMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  disabled={editMutation.isPending}
-                  data-testid="button-edit-submit"
-                >
-                  {editMutation.isPending ? "Updating..." : "Update Course"}
-                </Button>
-              </div>
-            </form>
-          )}
+          {editCourse && <EditCourseForm course={editCourse} onSubmit={(data) => editMutation.mutate({ id: editCourse._id, data })} isPending={editMutation.isPending} onCancel={() => setEditCourse(null)} />}
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function EditCourseForm({ course, onSubmit, isPending, onCancel }: { course: any; onSubmit: (data: any) => void; isPending: boolean; onCancel: () => void }) {
+  const [formData, setFormData] = useState({
+    title: course.title || '',
+    description: course.description || '',
+    type: course.type || 'ZIMSEC',
+    status: course.status || 'Free',
+    resourceType: course.resourceType || 'PDF',
+    price: course.price || '',
+    youtubeLink: course.youtubeLink || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data: any = {
+      title: formData.title,
+      description: formData.description,
+      type: formData.type,
+      status: formData.status,
+      resourceType: formData.resourceType,
+    };
+    if (formData.price) {
+      data.price = parseFloat(formData.price as any);
+    }
+    if (formData.youtubeLink) {
+      data.youtubeLink = formData.youtubeLink;
+    }
+    onSubmit(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="edit-title">Title *</Label>
+        <Input
+          id="edit-title"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          required
+          data-testid="input-edit-title"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-description">Description *</Label>
+        <Textarea
+          id="edit-description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+          required
+          data-testid="input-edit-description"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Course Type *</Label>
+          <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+            <SelectTrigger data-testid="select-edit-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ZIMSEC">ZIMSEC</SelectItem>
+              <SelectItem value="Cambridge">Cambridge</SelectItem>
+              <SelectItem value="Tertiary">Tertiary</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Resource Type *</Label>
+          <Select value={formData.resourceType} onValueChange={(value) => setFormData({ ...formData, resourceType: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PDF">PDF Document</SelectItem>
+              <SelectItem value="Video">Video File</SelectItem>
+              <SelectItem value="Image">Image File</SelectItem>
+              <SelectItem value="Audio">Audio File</SelectItem>
+              <SelectItem value="Lesson">YouTube Lesson</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Course Status *</Label>
+        <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+          <SelectTrigger data-testid="select-edit-status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Free">Free</SelectItem>
+            <SelectItem value="Premium">Premium (Paid)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-price">Price (USD)</Label>
+        <Input
+          id="edit-price"
+          type="number"
+          step="0.01"
+          value={formData.price}
+          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+          placeholder="25.00"
+          data-testid="input-edit-price"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-youtube">YouTube Link</Label>
+        <Input
+          id="edit-youtube"
+          value={formData.youtubeLink}
+          onChange={(e) => setFormData({ ...formData, youtubeLink: e.target.value })}
+          placeholder="https://youtube.com/watch?v=..."
+          data-testid="input-edit-youtube"
+        />
+      </div>
+
+      <div className="flex gap-3 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="flex-1"
+          disabled={isPending}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          className="flex-1"
+          disabled={isPending}
+          data-testid="button-edit-submit"
+        >
+          {isPending ? "Updating..." : "Update Course"}
+        </Button>
+      </div>
+    </form>
   );
 }

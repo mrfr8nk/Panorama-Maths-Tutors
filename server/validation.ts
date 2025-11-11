@@ -12,17 +12,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
-export const courseSchema = z.object({
+export const createCourseSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   type: z.enum(['ZIMSEC', 'Cambridge', 'Tertiary']),
   status: z.enum(['Free', 'Premium']),
   price: z.number().positive().optional(),
   youtubeLink: z.string().url().optional().or(z.literal('')),
-  resourceType: z.enum(['PDF', 'Video', 'Lesson'])
+  resourceType: z.enum(['PDF', 'Video', 'Image', 'Audio', 'Lesson'])
 });
 
-export const updateCourseSchema = courseSchema.partial();
+export const courseSchema = createCourseSchema;
+
+export const updateCourseSchema = createCourseSchema.partial();
 
 export const paymentSchema = z.object({
   courseId: z.string().min(1, 'Course ID is required'),
