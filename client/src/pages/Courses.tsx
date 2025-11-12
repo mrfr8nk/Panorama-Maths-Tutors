@@ -12,7 +12,6 @@ import tertImage from "@assets/generated_images/Tertiary_course_thumbnail_advanc
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import DownloadModal from "@/components/DownloadModal";
-import { useNavigate } from "react-router-dom";
 
 
 const getImageForType = (type: string) => {
@@ -28,7 +27,6 @@ export default function Courses() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading, token } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
 
   const { data: courses, isLoading } = useQuery<Course[]>({
@@ -50,11 +48,11 @@ export default function Courses() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      setLocation('/auth');
     } else if (!authLoading && user && user.role !== 'admin') {
-      navigate('/student-dashboard');
+      setLocation('/student');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, setLocation]);
 
 
   const handleEnroll = async (courseId: string) => {
