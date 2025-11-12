@@ -98,6 +98,11 @@ export default function Courses() {
     setDownloadModal({ open: true, course });
   };
 
+  const handleAccess = (fileUrl: string) => {
+    // Open catbox link in new tab
+    window.open(fileUrl, '_blank');
+  };
+
   const filteredCourses = filter === "All"
     ? courses || []
     : courses?.filter(course => course.type === filter) || [];
@@ -140,17 +145,20 @@ export default function Courses() {
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
                   <div key={course._id}>
-                    <div className="relative" onClick={() => handleEnroll(course._id)}>
-                      <CourseCard
-                        title={course.title}
-                        description={course.description}
-                        type={course.type}
-                        status={course.status}
-                        price={course.price ? `$${course.price.toFixed(2)}` : undefined}
-                        image={getImageForType(course.type)}
-                        resourceType={course.resourceType}
-                      />
-                    </div>
+                    <CourseCard
+                      title={course.title}
+                      description={course.description}
+                      type={course.type}
+                      status={course.status}
+                      price={course.price ? `$${course.price.toFixed(2)}` : undefined}
+                      image={getImageForType(course.type)}
+                      resourceType={course.resourceType}
+                      courseId={course._id}
+                      fileUrl={course.fileUrl}
+                      coverPhotoUrl={course.coverPhotoUrl}
+                      onEnroll={handleEnroll}
+                      onAccess={handleAccess}
+                    />
                   </div>
                 ))}
               </div>
