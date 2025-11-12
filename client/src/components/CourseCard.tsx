@@ -11,6 +11,8 @@ interface CourseCardProps {
   price?: string;
   image: string;
   resourceType: "PDF" | "Video" | "Lesson";
+  fileUrl?: string; // Assuming fileUrl is passed for downloads
+  courseId?: string; // Assuming courseId is passed for enrollment/payment
 }
 
 export default function CourseCard({
@@ -20,7 +22,9 @@ export default function CourseCard({
   status,
   price,
   image,
-  resourceType
+  resourceType,
+  fileUrl,
+  courseId
 }: CourseCardProps) {
   const getIcon = () => {
     switch (resourceType) {
@@ -30,6 +34,37 @@ export default function CourseCard({
         return <Video className="w-5 h-5" />;
       case "Lesson":
         return <CheckCircle2 className="w-5 h-5" />;
+    }
+  };
+
+  const handleAccessCourse = () => {
+    if (fileUrl) {
+      // Check if it's a YouTube link
+      if (fileUrl.includes('youtube.com') || fileUrl.includes('youtu.be')) {
+        window.open(fileUrl, '_blank');
+      } else {
+        // For uploaded files, trigger download
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = title || 'course-material';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+  };
+
+  const handleEnrollOrPay = () => {
+    if (status === "Premium" && courseId) {
+      // Trigger payment system for premium courses
+      // Replace with your actual payment gateway integration
+      console.log(`Initiating payment for premium course: ${courseId}`);
+      alert("Payment system would be triggered here."); 
+    } else if (status === "Free" && courseId) {
+      // Handle free course access, possibly navigate to course content
+      console.log(`Accessing free course: ${courseId}`);
+      handleAccessCourse(); // For free courses, this might just open the material
     }
   };
 
@@ -53,7 +88,7 @@ export default function CourseCard({
           </Badge>
         </div>
       </div>
-      
+
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-heading font-semibold text-lg text-foreground">{title}</h3>
@@ -62,19 +97,20 @@ export default function CourseCard({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <p className="text-muted-foreground text-sm">{description}</p>
         {price && status === "Premium" && (
           <p className="text-accent font-semibold mt-3 text-lg">{price}</p>
         )}
       </CardContent>
-      
+
       <CardFooter>
         <Button 
           className="w-full gap-2" 
           variant={status === "Free" ? "default" : "secondary"}
           data-testid={`button-enroll-${title.toLowerCase().replace(/\s+/g, '-')}`}
+          onClick={handleEnrollOrPay}
         >
           {status === "Premium" ? <Lock className="w-4 h-4" /> : null}
           {status === "Free" ? "Access Now" : "Enroll"}

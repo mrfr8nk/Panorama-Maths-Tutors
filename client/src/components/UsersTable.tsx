@@ -4,8 +4,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  educationLevel?: string;
+  enrolledCourses?: any[];
+}
+
 export default function UsersTable() {
-  const { data: users, isLoading } = useQuery<any[]>({
+  const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
 
@@ -33,17 +42,17 @@ export default function UsersTable() {
         </TableHeader>
         <TableBody>
           {users && users.length > 0 ? (
-            users.map((user: any) => (
+            users.map((user) => (
               <TableRow key={user._id}>
                 <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="text-sm">{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.role === 'admin' ? 'destructive' : 'default'}>
-                    {user.role}
+                  <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'tutor' ? 'secondary' : 'default'}>
+                    {user.role.toUpperCase()}
                   </Badge>
                 </TableCell>
                 <TableCell>{user.educationLevel || 'N/A'}</TableCell>
-                <TableCell>{user.enrolledCourses?.length || 0}</TableCell>
+                <TableCell className="text-center">{user.enrolledCourses?.length || 0}</TableCell>
               </TableRow>
             ))
           ) : (

@@ -21,10 +21,39 @@ export default function PaymentModal({ open, onOpenChange, courseName, courseId,
   const [status, setStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [instructions, setInstructions] = useState(''); // Added for instructions
+  const [isProcessing, setIsProcessing] = useState(false); // Added for processing state
+
+  // Mock checkPaymentStatus function for demonstration
+  const checkPaymentStatus = async (paymentId: string) => {
+    let interval: NodeJS.Timeout;
+    const checkStatus = async () => {
+      try {
+        const result = await paymentApi.checkStatus(paymentId);
+        if (result.status === "success") {
+          setStatus("success");
+          clearInterval(interval);
+          setTimeout(() => {
+            onOpenChange(false);
+            setStatus("idle");
+            setPhoneNumber("");
+            setPaymentId(null);
+            setInstructions('');
+            setIsProcessing(false);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Status check error:", error);
+        // Optionally, handle errors more gracefully here
+      }
+    };
+    interval = setInterval(checkStatus, 3000);
+    checkStatus(); // Initial check
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (paymentId && status === "processing") {
       interval = setInterval(async () => {
         try {
@@ -50,25 +79,44 @@ export default function PaymentModal({ open, onOpenChange, courseName, courseId,
     };
   }, [paymentId, status, onOpenChange]);
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("processing");
-    
+  const handlePayment = async () => {
+    if (!phoneNumber || phoneNumber.length < 10) {
+      alert("Please enter a valid phone number (e.g., 0771234567)");
+      return;
+    }
+
+    setIsProcessing(true);
+    setInstructions('Initiating payment...');
+
     try {
-      const result = await paymentApi.createMobilePayment(courseId, phoneNumber);
-      setPaymentId(result.paymentId);
-      toast({
-        title: "Payment Initiated",
-        description: "Please approve the payment on your phone",
+      const response = await fetch('/api/paynow/create-mobile-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          courseId,
+          phoneNumber: phoneNumber.startsWith('0') ? phoneNumber : `0${phoneNumber}`
+        })
       });
-    } catch (error: any) {
-      setStatus("error");
-      toast({
-        title: "Payment Failed",
-        description: error.response?.data?.error || "Failed to initiate payment",
-        variant: "destructive"
-      });
-      setTimeout(() => setStatus("idle"), 2000);
+
+      const data = await response.json();
+
+      if (response.ok && data.paymentId) {
+        setPaymentId(data.paymentId);
+        setInstructions(data.instructions || 'Please check your phone to approve the payment on your mobile money app (EcoCash/OneMoney)');
+        checkPaymentStatus(data.paymentId);
+      } else {
+        alert(data.error || 'Payment initiation failed. Please check your phone number and try again.');
+        setIsProcessing(false);
+        setInstructions('');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment service unavailable. Please try again later.');
+      setIsProcessing(false);
+      setInstructions('');
     }
   };
 
@@ -81,7 +129,7 @@ export default function PaymentModal({ open, onOpenChange, courseName, courseId,
             Complete your payment to access this course
           </DialogDescription>
         </DialogHeader>
-        
+
         {status === "success" ? (
           <div className="text-center py-8">
             <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -89,13 +137,13 @@ export default function PaymentModal({ open, onOpenChange, courseName, courseId,
             <p className="text-muted-foreground">You now have access to this course</p>
           </div>
         ) : (
-          <form onSubmit={handlePayment} className="space-y-6">
+          <form onSubmit={(e) => { e.preventDefault(); handlePayment(); }} className="space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between p-4 rounded-md bg-muted/30">
                 <span className="font-medium">{courseName}</span>
                 <Badge variant="default" className="text-lg">{price}</Badge>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Econet Number</Label>
                 <Input
@@ -105,22 +153,20 @@ export default function PaymentModal({ open, onOpenChange, courseName, courseId,
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="077 123 4567"
                   required
-                  disabled={status === "processing"}
+                  disabled={isProcessing}
                   data-testid="input-phone-number"
                 />
-                <p className="text-xs text-muted-foreground">
-                  You will receive a prompt on your phone to approve the payment
-                </p>
+                {instructions && <p className="text-xs text-muted-foreground">{instructions}</p>}
               </div>
             </div>
-            
+
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={status === "processing"}
+              disabled={isProcessing}
               data-testid="button-pay"
             >
-              {status === "processing" ? (
+              {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Processing...
