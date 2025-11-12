@@ -5,7 +5,7 @@ import CourseCard from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import PaymentModal from "@/components/PaymentModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { courseApi, Course } from "@/lib/api";
+import { courseApi, Course, analyticsApi, usersApi } from "@/lib/api";
 import zimImage from "@assets/generated_images/ZIMSEC_course_thumbnail_mathematics_159fd5b3.png";
 import cambImage from "@assets/generated_images/Cambridge_course_thumbnail_materials_9ebf3561.png";
 import tertImage from "@assets/generated_images/Tertiary_course_thumbnail_advanced_a1e9af16.png";
@@ -27,29 +27,19 @@ export default function Courses() {
   const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: courses = [], isLoading } = useQuery({
-    queryKey: ['/api/courses'],
-    queryFn: () => courseApi.getAll()
+  const { data: courses, isLoading } = useQuery<Course[]>({
+    queryKey: ["courses", filter],
+    queryFn: () => courseApi.getAll(filter !== "All" ? filter : undefined),
   });
 
   const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/stats'],
-    queryFn: () => fetch('/api/stats', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      }
-    }).then(res => res.json()),
-    enabled: !!localStorage.getItem('auth_token')
+    queryKey: ["analytics-stats"],
+    queryFn: () => analyticsApi.getStats(),
   });
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
-    queryKey: ['/api/users'],
-    queryFn: () => fetch('/api/users', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      }
-    }).then(res => res.json()),
-    enabled: !!localStorage.getItem('auth_token')
+    queryKey: ["users"],
+    queryFn: () => usersApi.getAll(),
   });
 
 

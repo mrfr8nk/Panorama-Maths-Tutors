@@ -1,8 +1,14 @@
-
 import { useQuery } from "@tanstack/react-query";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usersApi } from "@/lib/api";
 
 interface User {
   _id: string;
@@ -15,7 +21,8 @@ interface User {
 
 export default function UsersTable() {
   const { data: users, isLoading } = useQuery<User[]>({
-    queryKey: ['/api/users'],
+    queryKey: ["users"],
+    queryFn: usersApi.getAll,
   });
 
   if (isLoading) {

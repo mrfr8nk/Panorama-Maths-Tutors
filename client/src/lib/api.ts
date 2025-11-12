@@ -7,13 +7,33 @@ const api = axios.create({
   }
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('auth_token');
+      window.location.href = '/auth';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface User {
   id: string;
@@ -117,18 +137,16 @@ export const paymentApi = {
   }
 };
 
-// Add request interceptor to include auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 export const analyticsApi = {
   getStats: async () => {
     const { data } = await api.get('/analytics/stats');
+    return data;
+  }
+};
+
+export const usersApi = {
+  getAll: async () => {
+    const { data } = await api.get('/users');
     return data;
   }
 };
