@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CourseCard from "@/components/CourseCard";
@@ -12,6 +12,8 @@ import tertImage from "@assets/generated_images/Tertiary_course_thumbnail_advanc
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import DownloadModal from "@/components/DownloadModal";
+import { useNavigate } from "react-router-dom";
+
 
 const getImageForType = (type: string) => {
   if (type === "ZIMSEC") return zimImage;
@@ -24,8 +26,10 @@ export default function Courses() {
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; course?: Course }>({ open: false });
   const [downloadModal, setDownloadModal] = useState<{ open: boolean; course?: Course }>({ open: false });
   const [, setLocation] = useLocation();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, token } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["courses", filter],
@@ -35,14 +39,22 @@ export default function Courses() {
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["analytics-stats"],
     queryFn: () => analyticsApi.getStats(),
-    enabled: !authLoading && !!user,
+    enabled: !authLoading && !!user && !!token && user.role === 'admin',
   });
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => usersApi.getAll(),
-    enabled: !authLoading && !!user,
+    enabled: !authLoading && !!user && !!token && user.role === 'admin',
   });
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    } else if (!authLoading && user && user.role !== 'admin') {
+      navigate('/student-dashboard');
+    }
+  }, [user, authLoading, navigate]);
 
 
   const handleEnroll = async (courseId: string) => {
