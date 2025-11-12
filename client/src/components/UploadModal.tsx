@@ -27,6 +27,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     resourceType: "PDF"
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [coverPhoto, setCoverPhoto] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -35,7 +36,29 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     mutationFn: async (data: FormData) => {
       setUploadProgress(0);
 
-      // If we have files, upload them first to get CDN URLs
+      // Upload cover photo first if provided
+      let coverPhotoUrl: string | undefined;
+      const coverFile = data.get('coverPhoto') as File | null;
+      if (coverFile && coverFile.size > 0) {
+        const coverFormData = new FormData();
+        coverFormData.append('file', coverFile);
+
+        const coverUploadRes = await fetch("/api/courses/upload", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+          },
+          body: coverFormData
+        });
+
+        if (coverUploadRes.ok) {
+          const coverData = await coverUploadRes.json();
+          coverPhotoUrl = coverData.url;
+        }
+        setUploadProgress(15);
+      }
+
+      // If we have files, upload them to get CDN URLs
       const fileUrls: string[] = [];
       const files = data.getAll('file') as File[];
 
@@ -44,7 +67,6 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         const fileFormData = new FormData();
         fileFormData.append('file', file);
 
-        // Simulate Catbox API upload
         const uploadRes = await fetch("/api/courses/upload", {
           method: "POST",
           headers: {
@@ -62,10 +84,10 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         fileUrls.push(uploadData.url);
 
         // Update progress
-        setUploadProgress(((i + 1) / files.length) * 50);
+        setUploadProgress(15 + ((i + 1) / files.length) * 60);
       }
 
-      // Now create the course with the CDN URL
+      // Now create the course with the CDN URLs
       const courseData: any = {
         title: data.get('title') as string,
         description: data.get('description') as string,
@@ -87,7 +109,12 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         courseData.fileUrl = fileUrls[0];
       }
 
-      setUploadProgress(75);
+      // Add cover photo URL if uploaded
+      if (coverPhotoUrl) {
+        courseData.coverPhotoUrl = coverPhotoUrl;
+      }
+
+      setUploadProgress(85);
 
       const res = await fetch("/api/courses", {
         method: "POST",
@@ -113,6 +140,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         onOpenChange(false);
         setFormData({ title: "", description: "", type: "ZIMSEC", status: "Free", price: "", youtubeLink: "", resourceType: "PDF" });
         setSelectedFiles([]);
+        setCoverPhoto(null);
         setUploadProgress(0);
       }, 500);
     },
@@ -147,8 +175,12 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     }
 
     selectedFiles.forEach(file => {
-      submitData.append('files', file);
+      submitData.append('file', file);
     });
+
+    if (coverPhoto) {
+      submitData.append('coverPhoto', coverPhoto);
+    }
 
     uploadMutation.mutate(submitData);
   };
@@ -279,6 +311,50 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               />
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="coverPhoto">Cover Photo (Optional)</Label>
+            <div className="border-2 border-dashed border-border rounded-md p-4 text-center hover-elevate cursor-pointer">
+              <input
+                type="file"
+                id="coverPhoto"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setCoverPhoto(e.target.files[0]);
+                  }
+                }}
+                accept=".jpg,.jpeg,.png,.gif,.webp"
+                data-testid="input-cover-photo"
+                disabled={uploadMutation.isPending}
+              />
+              <label htmlFor="coverPhoto" className="cursor-pointer w-full h-full flex items-center justify-center">
+                {coverPhoto ? (
+                  <div className="flex items-center gap-2 text-primary">
+                    <File className="w-5 h-5" />
+                    <span className="text-sm font-medium">{coverPhoto.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCoverPhoto(null);
+                      }}
+                      disabled={uploadMutation.isPending}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Upload className="w-6 h-6" />
+                    <span className="text-sm">Click to upload cover image</span>
+                  </div>
+                )}
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">Recommended size: 1200x630px. Supported formats: JPG, PNG, GIF, WebP</p>
+          </div>
 
           {formData.resourceType !== "Lesson" && (
             <div className="space-y-2">

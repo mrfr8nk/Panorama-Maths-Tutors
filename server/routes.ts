@@ -393,6 +393,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/payments", authenticateToken, requireAdmin, async (_req: AuthRequest, res) => {
+    try {
+      const payments = await Payment.find()
+        .populate('userId', 'name email')
+        .populate('courseId', 'title')
+        .sort({ createdAt: -1 })
+        .limit(100);
+
+      res.json(payments);
+    } catch (error) {
+      console.error("Fetch payments error:", error);
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
   app.get("/api/payments/:id/status", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const payment = await Payment.findById(req.params.id);

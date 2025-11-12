@@ -41,6 +41,12 @@ export interface User {
   email: string;
   role: 'student' | 'tutor' | 'admin';
   educationLevel?: 'High School' | 'University' | 'College' | 'Other';
+  phoneNumber?: string;
+  address?: string;
+  school?: string;
+  gradeLevel?: string;
+  guardianName?: string;
+  guardianContact?: string;
   enrolledCourses?: string[];
 }
 
@@ -53,8 +59,11 @@ export interface Course {
   price?: number;
   fileUrl?: string;
   youtubeLink?: string;
-  resourceType: 'PDF' | 'Video' | 'Lesson';
+  coverPhotoUrl?: string;
+  resourceType: 'PDF' | 'Video' | 'Image' | 'Audio' | 'Lesson';
   enrollments: number;
+  uploadedAt?: Date;
+  createdAt?: Date;
 }
 
 export interface AuthResponse {

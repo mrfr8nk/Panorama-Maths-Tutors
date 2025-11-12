@@ -95,14 +95,12 @@ export default function Courses() {
   };
 
   const handleDownload = (course: Course) => {
-    if (course.resourceType === 'Uploaded') {
-      setDownloadModal({ open: true, course });
-    }
+    setDownloadModal({ open: true, course });
   };
 
   const filteredCourses = filter === "All"
-    ? courses
-    : courses.filter(course => course.type === filter);
+    ? courses || []
+    : courses?.filter(course => course.type === filter) || [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,11 +151,6 @@ export default function Courses() {
                         resourceType={course.resourceType}
                       />
                     </div>
-                    {course.resourceType === 'Uploaded' && (
-                      <Button onClick={() => handleDownload(course)} className="mt-2 w-full">
-                        Download Course
-                      </Button>
-                    )}
                   </div>
                 ))}
               </div>

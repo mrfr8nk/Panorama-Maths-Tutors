@@ -7,10 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { courseApi } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { courseApi, Course } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import ContentGallery from "@/components/ContentGallery";
+import SuggestedContent from "@/components/SuggestedContent";
+import PaymentModal from "@/components/PaymentModal";
+import DownloadModal from "@/components/DownloadModal";
+import { useLocation } from "wouter";
 
 const menuItems = [
   { title: "My Courses", icon: BookOpen, id: "courses" },
@@ -22,15 +28,45 @@ const menuItems = [
 export default function StudentDashboard() {
   const [activeSection, setActiveSection] = useState("courses");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; course?: Course }>({ open: false });
+  const [downloadModal, setDownloadModal] = useState<{ open: boolean; course?: Course }>({ open: false });
+  const [profileData, setProfileData] = useState({
+    phoneNumber: "",
+    address: "",
+    school: "",
+    gradeLevel: "",
+    guardianName: "",
+    guardianContact: ""
+  });
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const { data: userData, isLoading: userLoading } = useQuery({
+  const { data: userData, isLoading: userLoading } = useQuery<any>({
     queryKey: ['/api/auth/me'],
-    enabled: activeSection === "courses" || activeSection === "profile",
+    enabled: activeSection === "courses" || activeSection === "profile" || activeSection === "resources",
+  });
+
+  const { data: allCourses, isLoading: coursesLoading } = useQuery<Course[]>({
+    queryKey: ['/api/courses'],
+    enabled: activeSection === "resources"
   });
 
   const enrolledCourses = userData?.enrolledCourses || [];
-  const coursesLoading = userLoading;
+  const enrolledCourseIds = enrolledCourses.map((c: any) => c._id || c);
+
+  useEffect(() => {
+    if (userData) {
+      setProfileData({
+        phoneNumber: userData.phoneNumber || "",
+        address: userData.address || "",
+        school: userData.school || "",
+        gradeLevel: userData.gradeLevel || "",
+        guardianName: userData.guardianName || "",
+        guardianContact: userData.guardianContact || ""
+      });
+    }
+  }, [userData]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -150,7 +186,89 @@ export default function StudentDashboard() {
               )}
               
               {activeSection === "resources" && (
-                <div className="text-muted-foreground">Your resources will appear here...</div>
+                <div className="space-y-8">
+                  {coursesLoading || userLoading ? (
+                    <div className="text-center text-muted-foreground">Loading resources...</div>
+                  ) : allCourses && allCourses.length > 0 ? (
+                    <>
+                      <ContentGallery
+                        courses={allCourses}
+                        onEnroll={async (courseId) => {
+                          const course = allCourses.find(c => c._id === courseId);
+                          if (!course) return;
+
+                          if (course.status === 'Premium') {
+                            setPaymentModal({ open: true, course });
+                          } else {
+                            try {
+                              const response = await fetch(`/api/courses/${courseId}/enroll`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+
+                              if (response.ok) {
+                                queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                                queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+                              }
+                            } catch (error) {
+                              console.error('Enrollment failed:', error);
+                            }
+                          }
+                        }}
+                        onDownload={(course) => {
+                          if (enrolledCourseIds.includes(course._id)) {
+                            setDownloadModal({ open: true, course });
+                          }
+                        }}
+                        title="All Available Resources"
+                        userEnrolledCourses={enrolledCourseIds}
+                      />
+
+                      <SuggestedContent
+                        allCourses={allCourses}
+                        userEnrolledCourses={enrolledCourseIds}
+                        onEnroll={async (courseId) => {
+                          const course = allCourses.find(c => c._id === courseId);
+                          if (!course) return;
+
+                          if (course.status === 'Premium') {
+                            setPaymentModal({ open: true, course });
+                          } else {
+                            try {
+                              const response = await fetch(`/api/courses/${courseId}/enroll`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+
+                              if (response.ok) {
+                                queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                                queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+                              }
+                            } catch (error) {
+                              console.error('Enrollment failed:', error);
+                            }
+                          }
+                        }}
+                        onDownload={(course) => {
+                          if (enrolledCourseIds.includes(course._id)) {
+                            setDownloadModal({ open: true, course });
+                          }
+                        }}
+                        maxSuggestions={6}
+                      />
+                    </>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      <p>No resources available yet.</p>
+                    </div>
+                  )}
+                </div>
               )}
               
               {activeSection === "payments" && (
@@ -173,28 +291,88 @@ export default function StudentDashboard() {
                       <CardTitle>Personal Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input value={user?.name || ''} disabled />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Name</Label>
+                          <Input value={userData?.name || ''} disabled />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input value={userData?.email || ''} disabled />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Education Level</Label>
+                          <Select value={userData?.educationLevel || ''} disabled>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select education level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="High School">High School</SelectItem>
+                              <SelectItem value="University">University</SelectItem>
+                              <SelectItem value="College">College</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Phone Number</Label>
+                          <Input 
+                            value={profileData.phoneNumber}
+                            onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
+                            placeholder="e.g., +2637 1234 5678"
+                            disabled
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Address</Label>
+                          <Textarea 
+                            value={profileData.address}
+                            onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                            placeholder="Your address"
+                            rows={2}
+                            disabled
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>School/Institution</Label>
+                          <Input 
+                            value={profileData.school}
+                            onChange={(e) => setProfileData({ ...profileData, school: e.target.value })}
+                            placeholder="e.g., Churchill High School"
+                            disabled
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Grade/Year Level</Label>
+                          <Input 
+                            value={profileData.gradeLevel}
+                            onChange={(e) => setProfileData({ ...profileData, gradeLevel: e.target.value })}
+                            placeholder="e.g., Form 4, Year 2"
+                            disabled
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Guardian Name</Label>
+                          <Input 
+                            value={profileData.guardianName}
+                            onChange={(e) => setProfileData({ ...profileData, guardianName: e.target.value })}
+                            placeholder="Parent/Guardian full name"
+                            disabled
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Guardian Contact</Label>
+                          <Input 
+                            value={profileData.guardianContact}
+                            onChange={(e) => setProfileData({ ...profileData, guardianContact: e.target.value })}
+                            placeholder="Guardian phone/email"
+                            disabled
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input value={user?.email || ''} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Education Level</Label>
-                        <Select value={user?.educationLevel || ''} disabled>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select education level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="High School">High School</SelectItem>
-                            <SelectItem value="University">University</SelectItem>
-                            <SelectItem value="College">College</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        Contact admin to update your profile information
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -203,6 +381,25 @@ export default function StudentDashboard() {
           </main>
         </div>
       </div>
+
+      {paymentModal.course && (
+        <PaymentModal
+          open={paymentModal.open}
+          onOpenChange={(open) => setPaymentModal({ open, course: undefined })}
+          courseName={paymentModal.course.title}
+          courseId={paymentModal.course._id}
+          price={paymentModal.course.price ? `$${paymentModal.course.price.toFixed(2)}` : "$0.00"}
+        />
+      )}
+
+      {downloadModal.course && (
+        <DownloadModal
+          open={downloadModal.open}
+          onOpenChange={(open) => setDownloadModal({ open, course: undefined })}
+          courseId={downloadModal.course._id}
+          courseTitle={downloadModal.course.title}
+        />
+      )}
     </SidebarProvider>
   );
 }

@@ -10,9 +10,9 @@ interface CourseCardProps {
   status: "Free" | "Premium";
   price?: string;
   image: string;
-  resourceType: "PDF" | "Video" | "Lesson";
-  fileUrl?: string; // Assuming fileUrl is passed for downloads
-  courseId?: string; // Assuming courseId is passed for enrollment/payment
+  resourceType: "PDF" | "Video" | "Image" | "Audio" | "Lesson";
+  fileUrl?: string;
+  courseId?: string;
 }
 
 export default function CourseCard({
@@ -31,9 +31,13 @@ export default function CourseCard({
       case "PDF":
         return <BookOpen className="w-5 h-5" />;
       case "Video":
+      case "Image":
+      case "Audio":
         return <Video className="w-5 h-5" />;
       case "Lesson":
         return <CheckCircle2 className="w-5 h-5" />;
+      default:
+        return <BookOpen className="w-5 h-5" />;
     }
   };
 

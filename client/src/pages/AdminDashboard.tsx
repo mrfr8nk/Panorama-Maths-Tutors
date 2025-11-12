@@ -6,6 +6,7 @@ import DashboardStats from "@/components/DashboardStats";
 import UploadModal from "@/components/UploadModal";
 import CourseTable from "@/components/CourseTable";
 import UsersTable from "@/components/UsersTable";
+import PaymentTracker from "@/components/PaymentTracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -144,39 +145,7 @@ export default function AdminDashboard() {
               {activeSection === "courses" && <CourseTable />}
               {activeSection === "payments" && (
                 <div className="space-y-4">
-                  <Card className="backdrop-blur-sm bg-card/80">
-                    <CardHeader>
-                      <CardTitle>Payment Management</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4">
-                        View and manage all payment transactions from students.
-                      </p>
-                      {statsLoading ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-20 w-full" />
-                          <Skeleton className="h-20 w-full" />
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-3 border rounded-md">
-                            <div>
-                              <p className="font-medium">Total Revenue</p>
-                              <p className="text-sm text-muted-foreground">All time</p>
-                            </div>
-                            <p className="text-2xl font-bold">${stats?.totalRevenue || 0}</p>
-                          </div>
-                          <div className="flex justify-between items-center p-3 border rounded-md">
-                            <div>
-                              <p className="font-medium">Pending Payments</p>
-                              <p className="text-sm text-muted-foreground">Awaiting confirmation</p>
-                            </div>
-                            <p className="text-2xl font-bold">{stats?.pendingPayments || 0}</p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <PaymentTracker />
                 </div>
               )}
               {activeSection === "users" && (
