@@ -35,11 +35,13 @@ export default function Courses() {
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["analytics-stats"],
     queryFn: () => analyticsApi.getStats(),
+    enabled: !authLoading && !!user,
   });
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => usersApi.getAll(),
+    enabled: !authLoading && !!user,
   });
 
 

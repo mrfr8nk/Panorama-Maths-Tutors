@@ -39,17 +39,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await authApi.login(email, password);
+    // Set token first to ensure it's available for subsequent API calls
     localStorage.setItem('auth_token', response.token);
     setToken(response.token);
     setUser(response.user);
+    // Force a small delay to ensure localStorage is written
+    await new Promise(resolve => setTimeout(resolve, 100));
     return response.user;
   };
 
   const register = async (name: string, email: string, password: string, educationLevel?: string) => {
     const response = await authApi.register(name, email, password, educationLevel);
+    // Set token first to ensure it's available for subsequent API calls
     localStorage.setItem('auth_token', response.token);
     setToken(response.token);
     setUser(response.user);
+    // Force a small delay to ensure localStorage is written
+    await new Promise(resolve => setTimeout(resolve, 100));
   };
 
   const logout = () => {
