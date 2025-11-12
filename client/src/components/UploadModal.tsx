@@ -66,24 +66,25 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
       }
 
       // Now create the course with the CDN URL
-      const courseData = new FormData();
-      courseData.append('title', data.get('title') as string);
-      courseData.append('description', data.get('description') as string);
-      courseData.append('type', data.get('type') as string);
-      courseData.append('status', data.get('status') as string);
-      courseData.append('resourceType', data.get('resourceType') as string);
+      const courseData: any = {
+        title: data.get('title') as string,
+        description: data.get('description') as string,
+        type: data.get('type') as string,
+        status: data.get('status') as string,
+        resourceType: data.get('resourceType') as string
+      };
 
       if (data.get('price')) {
-        courseData.append('price', data.get('price') as string);
+        courseData.price = parseFloat(data.get('price') as string);
       }
 
       if (data.get('youtubeLink')) {
-        courseData.append('youtubeLink', data.get('youtubeLink') as string);
+        courseData.youtubeLink = data.get('youtubeLink') as string;
       }
 
       // Use the first uploaded file URL for the course
       if (fileUrls.length > 0) {
-        courseData.append('fileUrl', fileUrls[0]);
+        courseData.fileUrl = fileUrls[0];
       }
 
       setUploadProgress(75);
@@ -91,9 +92,10 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
       const res = await fetch("/api/courses", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+          "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
+          "Content-Type": "application/json"
         },
-        body: courseData
+        body: JSON.stringify(courseData)
       });
 
       if (!res.ok) {
@@ -145,7 +147,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     }
 
     selectedFiles.forEach(file => {
-      submitData.append('file', file);
+      submitData.append('files', file);
     });
 
     uploadMutation.mutate(submitData);
