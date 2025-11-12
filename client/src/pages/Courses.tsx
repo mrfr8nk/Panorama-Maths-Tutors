@@ -34,17 +34,19 @@ export default function Courses() {
     queryFn: () => courseApi.getAll(filter !== "All" ? filter : undefined),
   });
 
-  const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["analytics-stats"],
-    queryFn: () => analyticsApi.getStats(),
-    enabled: !authLoading && !!user && !!token && user.role === 'admin',
-  });
+  // Removed statsData and statsLoading as per user request due to token issues
+  // const { data: statsData, isLoading: statsLoading } = useQuery({
+  //   queryKey: ["analytics-stats"],
+  //   queryFn: () => analyticsApi.getStats(),
+  //   enabled: !authLoading && !!user && !!token && user.role === 'admin',
+  // });
 
-  const { data: usersData, isLoading: usersLoading } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => usersApi.getAll(),
-    enabled: !authLoading && !!user && !!token && user.role === 'admin',
-  });
+  // Removed usersData and usersLoading as per user request due to token issues
+  // const { data: usersData, isLoading: usersLoading } = useQuery({
+  //   queryKey: ["users"],
+  //   queryFn: () => usersApi.getAll(),
+  //   enabled: !authLoading && !!user && !!token && user.role === 'admin',
+  // });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -129,63 +131,15 @@ export default function Courses() {
             </div>
           </div>
 
-          {(isLoading || authLoading || statsLoading || usersLoading) ? (
+          {(isLoading || authLoading) ? ( // Removed statsLoading and usersLoading from the condition
             <div className="text-center text-muted-foreground">Loading...</div>
           ) : (
             <>
-              {/* Stats Section */}
-              {statsData && (
-                <div className="mb-12 bg-background p-6 rounded-lg shadow-md">
-                  <h2 className="font-heading font-bold text-2xl text-foreground mb-4">Statistics</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <div className="p-4 bg-accent rounded-lg text-center">
-                      <p className="text-muted-foreground uppercase text-sm font-semibold">Total Courses</p>
-                      <p className="text-3xl font-bold text-primary">{statsData.totalCourses}</p>
-                    </div>
-                    <div className="p-4 bg-accent rounded-lg text-center">
-                      <p className="text-muted-foreground uppercase text-sm font-semibold">Total Students</p>
-                      <p className="text-3xl font-bold text-primary">{statsData.totalStudents}</p>
-                    </div>
-                    <div className="p-4 bg-accent rounded-lg text-center">
-                      <p className="text-muted-foreground uppercase text-sm font-semibold">Enrollments Today</p>
-                      <p className="text-3xl font-bold text-primary">{statsData.todayEnrollments}</p>
-                    </div>
-                    <div className="p-4 bg-accent rounded-lg text-center">
-                      <p className="text-muted-foreground uppercase text-sm font-semibold">Revenue Today</p>
-                      <p className="text-3xl font-bold text-primary">${statsData.todayRevenue.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Removed Stats Section */}
 
-              {/* Users Section */}
-              {usersData && (
-                <div className="mb-12 bg-background p-6 rounded-lg shadow-md">
-                  <h2 className="font-heading font-bold text-2xl text-foreground mb-4">Registered Users</h2>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {usersData.map((user: any) => (
-                          <tr key={user._id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              {/* Removed Users Section */}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
                   <div key={course._id}>
                     <div className="relative" onClick={() => handleEnroll(course._id)}>
