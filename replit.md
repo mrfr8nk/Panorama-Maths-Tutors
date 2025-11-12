@@ -16,6 +16,13 @@ The application is built as a full-stack web platform with a React frontend usin
   - Added `uploadedAt` timestamp to automatically track when content was uploaded
   - UploadModal now supports optional cover photo upload with progress tracking
   - ContentGallery component displays courses with framer-motion animations, premium badges, and upload timestamps
+  - Cover photos now display on course cards, falling back to type-based images when not available
+  
+- **Course Access Functionality:**
+  - "Access Now" button on free courses now properly opens catbox media links in new tab
+  - CourseCard refactored to presentational component with onEnroll and onAccess callbacks
+  - Free courses with fileUrl open directly when accessed
+  - Premium courses trigger Paynow payment flow through enrollment process
   
 - **Student Profile Expansion:**
   - Extended User model with additional fields: `phoneNumber`, `address`, `school`, `gradeLevel`, `guardianName`, `guardianContact`
