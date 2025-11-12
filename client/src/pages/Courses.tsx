@@ -9,8 +9,8 @@ import { courseApi, Course } from "@/lib/api";
 import zimImage from "@assets/generated_images/ZIMSEC_course_thumbnail_mathematics_159fd5b3.png";
 import cambImage from "@assets/generated_images/Cambridge_course_thumbnail_materials_9ebf3561.png";
 import tertImage from "@assets/generated_images/Tertiary_course_thumbnail_advanced_a1e9af16.png";
-import { useRouter } from "next/router";
-import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import DownloadModal from "@/components/DownloadModal";
 
 const getImageForType = (type: string) => {
@@ -23,7 +23,7 @@ export default function Courses() {
   const [filter, setFilter] = useState<"All" | "ZIMSEC" | "Cambridge" | "Tertiary">("All");
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; course?: Course }>({ open: false });
   const [downloadModal, setDownloadModal] = useState<{ open: boolean; course?: Course }>({ open: false });
-  const router = useRouter();
+  const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
@@ -55,7 +55,7 @@ export default function Courses() {
 
   const handleEnroll = async (courseId: string) => {
     if (!user) {
-      router.push('/auth');
+      setLocation('/auth');
       return;
     }
 
