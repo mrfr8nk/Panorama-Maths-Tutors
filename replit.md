@@ -10,7 +10,45 @@ The application is built as a full-stack web platform with a React frontend usin
 
 ## Recent Changes (November 2025)
 
-### Latest Updates (November 9, 2025)
+### Latest Updates (November 12, 2025)
+- **Enhanced Course Management:**
+  - Added `coverPhotoUrl` field to Course model for optional cover images during upload
+  - Added `uploadedAt` timestamp to automatically track when content was uploaded
+  - UploadModal now supports optional cover photo upload with progress tracking
+  - ContentGallery component displays courses with framer-motion animations, premium badges, and upload timestamps
+  
+- **Student Profile Expansion:**
+  - Extended User model with additional fields: `phoneNumber`, `address`, `school`, `gradeLevel`, `guardianName`, `guardianContact`
+  - StudentDashboard profile section now includes comprehensive personal data form
+  - All new fields are optional and backward compatible with existing user data
+  
+- **Premium Content Protection & Access:**
+  - Resources page now displays all available courses with visual differentiation
+  - Free courses show immediate download modal after enrollment
+  - Premium courses display PRO badge and redirect to Paynow payment flow
+  - Fixed free course access issue - users can now properly access free content without payment
+  - Premium content is gated behind successful Paynow payment confirmation
+  
+- **Smart Content Recommendations:**
+  - Created SuggestedContent component with "You May Also Like" feature
+  - Recommendation algorithm prioritizes courses by: same type → same resource type → enrollment popularity
+  - Uses intelligent deduplication and random sampling for variety
+  - Smooth animations using framer-motion for card transitions
+  
+- **Admin Payment Tracking:**
+  - New PaymentTracker component showing comprehensive transaction history
+  - Displays payment status (pending/processing/success/failed) with visual indicators
+  - Shows summary statistics: total transactions, successful payments, pending count, total revenue
+  - Backend `/api/payments` endpoint returns last 100 transactions with user and course details
+  - Admin dashboard payments section replaced with full PaymentTracker integration
+  
+- **UI/UX Enhancements:**
+  - CourseCard component now supports all resource types: PDF, Video, Image, Audio, Lesson
+  - Animated content displays with hover effects and smooth transitions
+  - Premium badges and status indicators for better content visibility
+  - Upload timestamps displayed with relative time formatting (e.g., "2 hours ago")
+
+### Earlier Updates (November 9, 2025)
 - **File Upload System Improvements:**
   - Increased file size limit to 200MB with proper Multer configuration
   - Created FileUpload MongoDB model to persist upload metadata (fileId, originalName, customName, mimeType, size, catboxUrl, uploadedBy, uploadedAt)
