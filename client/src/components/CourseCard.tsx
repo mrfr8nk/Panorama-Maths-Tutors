@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Video, Lock, CheckCircle2 } from "lucide-react";
+import { BookOpen, Video, Lock, CheckCircle2, ExternalLink } from "lucide-react";
 
 interface CourseCardProps {
   title: string;
@@ -12,7 +12,10 @@ interface CourseCardProps {
   image: string;
   resourceType: "PDF" | "Video" | "Image" | "Audio" | "Lesson";
   fileUrl?: string;
-  courseId?: string;
+  courseId: string;
+  coverPhotoUrl?: string;
+  onEnroll: (courseId: string) => void;
+  onAccess?: (fileUrl: string) => void;
 }
 
 export default function CourseCard({
@@ -24,7 +27,10 @@ export default function CourseCard({
   image,
   resourceType,
   fileUrl,
-  courseId
+  courseId,
+  coverPhotoUrl,
+  onEnroll,
+  onAccess
 }: CourseCardProps) {
   const getIcon = () => {
     switch (resourceType) {
@@ -41,42 +47,21 @@ export default function CourseCard({
     }
   };
 
-  const handleAccessCourse = () => {
-    if (fileUrl) {
-      // Check if it's a YouTube link
-      if (fileUrl.includes('youtube.com') || fileUrl.includes('youtu.be')) {
-        window.open(fileUrl, '_blank');
-      } else {
-        // For uploaded files, trigger download
-        const link = document.createElement('a');
-        link.href = fileUrl;
-        link.download = title || 'course-material';
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+  const handleButtonClick = () => {
+    if (status === "Free" && fileUrl && onAccess) {
+      onAccess(fileUrl);
+    } else {
+      onEnroll(courseId);
     }
   };
 
-  const handleEnrollOrPay = () => {
-    if (status === "Premium" && courseId) {
-      // Trigger payment system for premium courses
-      // Replace with your actual payment gateway integration
-      console.log(`Initiating payment for premium course: ${courseId}`);
-      alert("Payment system would be triggered here."); 
-    } else if (status === "Free" && courseId) {
-      // Handle free course access, possibly navigate to course content
-      console.log(`Accessing free course: ${courseId}`);
-      handleAccessCourse(); // For free courses, this might just open the material
-    }
-  };
+  const displayImage = coverPhotoUrl || image;
 
   return (
     <Card className="overflow-hidden hover-elevate transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm bg-card/80 border-card-border">
       <div 
         className="h-48 bg-cover bg-center relative"
-        style={{ backgroundImage: `url(${image})` }}
+        style={{ backgroundImage: `url(${displayImage})` }}
       >
         <div className="absolute top-3 right-3 flex gap-2">
           <Badge 
@@ -113,10 +98,11 @@ export default function CourseCard({
         <Button 
           className="w-full gap-2" 
           variant={status === "Free" ? "default" : "secondary"}
-          data-testid={`button-enroll-${title.toLowerCase().replace(/\s+/g, '-')}`}
-          onClick={handleEnrollOrPay}
+          data-testid={status === "Free" ? `button-access-${courseId}` : `button-enroll-${courseId}`}
+          onClick={handleButtonClick}
         >
-          {status === "Premium" ? <Lock className="w-4 h-4" /> : null}
+          {status === "Free" && fileUrl && <ExternalLink className="w-4 h-4" />}
+          {status === "Premium" && <Lock className="w-4 h-4" />}
           {status === "Free" ? "Access Now" : "Enroll"}
         </Button>
       </CardFooter>
