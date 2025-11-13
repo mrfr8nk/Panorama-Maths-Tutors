@@ -184,6 +184,7 @@ export default function Courses() {
           onOpenChange={(open) => setDownloadModal({ open, course: undefined })}
           courseId={downloadModal.course._id}
           courseTitle={downloadModal.course.title}
+          fileUrl={downloadModal.course.fileUrl}
         />
       )}
     </div>
