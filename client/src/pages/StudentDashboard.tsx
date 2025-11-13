@@ -172,7 +172,19 @@ export default function StudentDashboard() {
                             <Badge variant={course.status === 'Free' ? 'default' : 'secondary'}>
                               {course.status}
                             </Badge>
-                            <Button size="sm" data-testid="button-view-course">View Course</Button>
+                            <Button 
+                              size="sm" 
+                              data-testid="button-view-course"
+                              onClick={() => {
+                                if (course.fileUrl) {
+                                  window.open(course.fileUrl, '_blank');
+                                } else {
+                                  setDownloadModal({ open: true, course });
+                                }
+                              }}
+                            >
+                              View Course
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
