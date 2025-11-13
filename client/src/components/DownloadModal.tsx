@@ -16,26 +16,33 @@ export default function DownloadModal({ open, onOpenChange, courseId, courseTitl
   const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
-  const handleDownload = async () => {
-    if (fileUrl) {
-      setIsDownloading(true);
-      try {
-        // Open the file URL in a new tab
-        window.open(fileUrl, '_blank');
-        toast({
-          title: "Download Started",
-          description: "Your course materials are being downloaded.",
-        });
-      } catch (error) {
-        toast({
-          title: "Download Failed",
-          description: "Failed to download course materials. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsDownloading(false);
-        onOpenChange(false);
-      }
+  const handleDownload = () => {
+    if (!fileUrl) {
+      toast({
+        title: "Download Failed",
+        description: "No file URL available for this course.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      // Open the file URL in a new tab
+      window.open(fileUrl, '_blank');
+      toast({
+        title: "Download Started",
+        description: "Your course materials are being downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download course materials. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+      onOpenChange(false);
     }
   };
 
@@ -54,11 +61,11 @@ export default function DownloadModal({ open, onOpenChange, courseId, courseTitl
           </p>
           <Button
             onClick={handleDownload}
-            disabled={isDownloading || !fileUrl}
+            disabled={isDownloading}
             className="w-full"
           >
             <Download className="mr-2 h-4 w-4" />
-            {isDownloading ? "Downloading..." : "Download Now"}
+            {isDownloading ? "Opening..." : "Download Now"}
           </Button>
         </div>
       </DialogContent>
