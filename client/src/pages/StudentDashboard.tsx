@@ -398,6 +398,7 @@ export default function StudentDashboard() {
           onOpenChange={(open) => setDownloadModal({ open, course: undefined })}
           courseId={downloadModal.course._id}
           courseTitle={downloadModal.course.title}
+          fileUrl={downloadModal.course.fileUrl}
         />
       )}
     </SidebarProvider>
