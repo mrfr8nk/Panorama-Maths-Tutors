@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Upload } from "lucide-react";
 import heroImage from "@assets/generated_images/Hero_background_mathematics_classroom_ddfc0604.png";
+import { useState } from "react";
+import UploadModal from "./UploadModal";
 
 interface HeroSectionProps {
   onViewCourses?: () => void;
@@ -8,6 +10,8 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onViewCourses, onGetStarted }: HeroSectionProps) {
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
   return (
     <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
       <div
@@ -33,10 +37,20 @@ export function HeroSection({ onViewCourses, onGetStarted }: HeroSectionProps) {
               <Button size="lg" variant="outline" className="px-8 backdrop-blur-sm" onClick={onGetStarted}>
                 Get Started
               </Button>
+              <Button 
+                size="lg" 
+                variant="secondary" 
+                className="px-8 backdrop-blur-sm"
+                onClick={() => setUploadModalOpen(true)}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Content
+              </Button>
             </div>
           </div>
         </div>
       </div>
+      <UploadModal open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </section>
   );
 }

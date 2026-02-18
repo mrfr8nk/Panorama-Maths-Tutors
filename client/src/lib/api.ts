@@ -155,7 +155,11 @@ export const analyticsApi = {
 
 export const usersApi = {
   getAll: async () => {
-    const { data } = await api.get('/users');
+    const { data } = await api.get<User[]>('/users');
+    return data;
+  },
+  update: async (id: string, updates: Partial<User>) => {
+    const { data } = await api.patch<User>(`/users/${id}`, updates);
     return data;
   }
 };

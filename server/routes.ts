@@ -501,6 +501,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { name, email, role, educationLevel, phoneNumber, address, school, gradeLevel, guardianName, guardianContact } = req.body;
+      
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        { name, email, role, educationLevel, phoneNumber, address, school, gradeLevel, guardianName, guardianContact },
+        { new: true }
+      ).select('-password');
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
   // Analytics endpoint
   app.get('/api/analytics/stats', authenticateToken, requireAdmin, async (_req: AuthRequest, res) => {
     try {
