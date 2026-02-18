@@ -46,7 +46,7 @@ const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   role: z.enum(["student", "tutor", "admin"]),
-  educationLevel: z.string().optional(),
+  educationLevel: z.enum(["High School", "University", "College", "Other", ""]).or(z.literal("")).optional(),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
   school: z.string().optional(),
