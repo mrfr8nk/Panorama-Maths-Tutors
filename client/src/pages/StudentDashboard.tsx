@@ -87,6 +87,31 @@ export default function StudentDashboard() {
     "--sidebar-width": "16rem",
   };
 
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/users/${user?.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        alert("Profile updated successfully!");
+      } else {
+        const errorData = await response.json();
+        alert(`Update failed: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      alert("Failed to update profile");
+    }
+  };
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -332,7 +357,6 @@ export default function StudentDashboard() {
                             value={profileData.phoneNumber}
                             onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
                             placeholder="e.g., +2637 1234 5678"
-                            disabled
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -342,7 +366,6 @@ export default function StudentDashboard() {
                             onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                             placeholder="Your address"
                             rows={2}
-                            disabled
                           />
                         </div>
                         <div className="space-y-2">
@@ -351,7 +374,6 @@ export default function StudentDashboard() {
                             value={profileData.school}
                             onChange={(e) => setProfileData({ ...profileData, school: e.target.value })}
                             placeholder="e.g., Churchill High School"
-                            disabled
                           />
                         </div>
                         <div className="space-y-2">
@@ -360,7 +382,6 @@ export default function StudentDashboard() {
                             value={profileData.gradeLevel}
                             onChange={(e) => setProfileData({ ...profileData, gradeLevel: e.target.value })}
                             placeholder="e.g., Form 4, Year 2"
-                            disabled
                           />
                         </div>
                         <div className="space-y-2">
@@ -369,7 +390,6 @@ export default function StudentDashboard() {
                             value={profileData.guardianName}
                             onChange={(e) => setProfileData({ ...profileData, guardianName: e.target.value })}
                             placeholder="Parent/Guardian full name"
-                            disabled
                           />
                         </div>
                         <div className="space-y-2">
@@ -378,13 +398,12 @@ export default function StudentDashboard() {
                             value={profileData.guardianContact}
                             onChange={(e) => setProfileData({ ...profileData, guardianContact: e.target.value })}
                             placeholder="Guardian phone/email"
-                            disabled
                           />
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-4">
-                        Contact admin to update your profile information
-                      </p>
+                      <Button onClick={handleProfileUpdate} className="mt-4">
+                        Save Profile Changes
+                      </Button>
                     </CardContent>
                   </Card>
                 </div>

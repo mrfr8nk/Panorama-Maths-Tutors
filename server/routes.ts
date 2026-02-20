@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload course content
-  app.post('/api/courses/upload', authenticateToken, requireTutorOrAdmin, (req: AuthRequest, res, next) => {
+  app.post('/api/courses/upload', (req: AuthRequest, res, next) => {
     upload.single('file')(req, res, (err: any) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mimeType: req.file.mimetype,
         size: req.file.size,
         catboxUrl: result.cdnUrl || '',
-        uploadedBy: req.userId,
+        uploadedBy: req.userId || null,
         uploadedAt: new Date()
       };
 

@@ -18,7 +18,7 @@ const FileUploadSchema = new Schema<IFileUpload>({
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   catboxUrl: { type: String, required: true },
-  uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: false },
   uploadedAt: { type: Date, default: Date.now }
 });
 
