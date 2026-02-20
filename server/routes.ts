@@ -685,6 +685,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/updates/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const { title, content, type, active } = req.body;
+      const update = await Update.findByIdAndUpdate(
+        req.params.id,
+        { title, content, type, active },
+        { new: true }
+      );
+      if (!update) {
+        return res.status(404).json({ error: "Update not found" });
+      }
+      res.json(update);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update" });
+    }
+  });
+
+  app.delete("/api/updates/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const update = await Update.findByIdAndDelete(req.params.id);
+      if (!update) {
+        return res.status(404).json({ error: "Update not found" });
+      }
+      res.json({ message: "Update deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete update" });
+    }
+  });
+
+  app.patch("/api/auth/profile", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { name, educationLevel, phoneNumber, address, school, gradeLevel, guardianName, guardianContact } = req.body;
+      const user = await User.findByIdAndUpdate(
+        req.userId,
+        { name, educationLevel, phoneNumber, address, school, gradeLevel, guardianName, guardianContact },
+        { new: true }
+      ).select('-password');
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

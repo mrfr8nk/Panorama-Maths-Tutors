@@ -30,7 +30,9 @@ export default function StudentDashboard() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; course?: Course }>({ open: false });
   const [downloadModal, setDownloadModal] = useState<{ open: boolean; course?: Course }>({ open: false });
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<any>({
+    name: "",
+    educationLevel: "",
     phoneNumber: "",
     address: "",
     school: "",
@@ -58,6 +60,8 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (userData) {
       setProfileData({
+        name: userData.name || "",
+        educationLevel: userData.educationLevel || "",
         phoneNumber: userData.phoneNumber || "",
         address: userData.address || "",
         school: userData.school || "",
@@ -90,7 +94,7 @@ export default function StudentDashboard() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/users/${user?.id}`, {
+      const response = await fetch(`/api/auth/profile`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -331,7 +335,10 @@ export default function StudentDashboard() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Name</Label>
-                          <Input value={userData?.name || ''} disabled />
+                          <Input 
+                            value={profileData.name} 
+                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label>Email</Label>
@@ -339,7 +346,10 @@ export default function StudentDashboard() {
                         </div>
                         <div className="space-y-2">
                           <Label>Education Level</Label>
-                          <Select value={userData?.educationLevel || ''} disabled>
+                          <Select 
+                            value={profileData.educationLevel || userData?.educationLevel || ''} 
+                            onValueChange={(v) => setProfileData({ ...profileData, educationLevel: v })}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Select education level" />
                             </SelectTrigger>
