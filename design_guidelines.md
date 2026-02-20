@@ -1,5 +1,7 @@
 # Panorama Maths Tutors - Design Guidelines
 
+# Made by Darrell Mucheri
+
 ## Design Approach
 **Glassmorphism-based design system** featuring frosted glass panels, blurred backgrounds, transparent overlays with subtle borders, creating a modern, premium educational platform aesthetic.
 
