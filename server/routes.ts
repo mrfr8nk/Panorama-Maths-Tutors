@@ -8,6 +8,7 @@ import Course from "./models/Course";
 import Payment from "./models/Payment";
 import FileUpload from "./models/FileUpload";
 import Visitor from "./models/Visitor";
+import Update from "./models/Update";
 import { generateToken, authenticateToken, requireAdmin, requireTutorOrAdmin, AuthRequest } from "./middleware/auth";
 import { uploadToCatbox } from "./utils/catbox";
 import { initiateMobilePayment, checkPaymentStatus } from "./utils/paynow";
@@ -655,6 +656,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Enrollment error:", error);
       res.status(500).json({ error: "Failed to enroll in course" });
+    }
+  });
+
+  // Update routes
+  app.get("/api/updates", async (req, res) => {
+    try {
+      const updates = await Update.find({ active: true }).sort({ createdAt: -1 }).limit(5);
+      res.json(updates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch updates" });
+    }
+  });
+
+  app.post("/api/updates", authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const { title, content, type } = req.body;
+      const update = new Update({
+        title,
+        content,
+        type,
+        createdBy: req.userId
+      });
+      await update.save();
+      res.json(update);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create update" });
     }
   });
 

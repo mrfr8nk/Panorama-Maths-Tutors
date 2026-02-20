@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Upload, BookOpen, DollarSign, Users, Settings, Moon, Sun, Megaphone } from "lucide-react";
 import DashboardStats from "@/components/DashboardStats";
 import UploadModal from "@/components/UploadModal";
 import CourseTable from "@/components/CourseTable";
 import UsersTable from "@/components/UsersTable";
 import PaymentTracker from "@/components/PaymentTracker";
+import AdminUpdates from "@/components/AdminUpdates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
   { title: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
+  { title: "Updates", icon: Megaphone, id: "updates" },
   { title: "Upload Content", icon: Upload, id: "upload" },
   { title: "Manage Courses", icon: BookOpen, id: "courses" },
   { title: "Payments", icon: DollarSign, id: "payments" },
@@ -142,6 +144,7 @@ export default function AdminDashboard() {
               </h1>
               
               {activeSection === "dashboard" && <DashboardStats />}
+              {activeSection === "updates" && <AdminUpdates />}
               {activeSection === "courses" && <CourseTable />}
               {activeSection === "payments" && (
                 <div className="space-y-4">

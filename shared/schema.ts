@@ -85,5 +85,21 @@ export type Payment = z.infer<typeof paymentSchema>;
 export type EducationLevel = z.infer<typeof educationLevelEnum>;
 export type UserRole = z.infer<typeof userRoleEnum>;
 export type CourseType = z.infer<typeof courseTypeEnum>;
-export type CourseStatus = z.infer<typeof courseStatusEnum>;
-export type ResourceType = z.infer<typeof resourceTypeEnum>;
+export const updateSchema = z.object({
+  _id: z.string(),
+  title: z.string(),
+  content: z.string(),
+  type: z.enum(['announcement', 'feature', 'alert']),
+  active: z.boolean(),
+  createdBy: z.string(),
+  createdAt: z.date().or(z.string()),
+});
+
+export const createUpdateSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  content: z.string().min(5, "Content must be at least 5 characters"),
+  type: z.enum(['announcement', 'feature', 'alert']).default('announcement'),
+});
+
+export type Update = z.infer<typeof updateSchema>;
+export type CreateUpdate = z.infer<typeof createUpdateSchema>;
