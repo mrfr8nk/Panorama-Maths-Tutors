@@ -225,17 +225,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Save file metadata to MongoDB
-      const fileUpload = new FileUpload({
+      // Use findOneAndUpdate with upsert to avoid duplicate key errors on fileId
+      const fileMetadata = {
         fileId: result.fileId,
         originalName: req.file.originalname,
         customName: customName,
         mimeType: req.file.mimetype,
         size: req.file.size,
         catboxUrl: result.cdnUrl || '',
-        uploadedBy: req.userId
-      });
+        uploadedBy: req.userId,
+        uploadedAt: new Date()
+      };
 
-      await fileUpload.save();
+      await FileUpload.findOneAndUpdate(
+        { fileId: result.fileId },
+        fileMetadata,
+        { upsert: true, new: true }
+      );
       console.log('File metadata saved to MongoDB:', result.fileId);
 
       res.json({ 
